@@ -2634,6 +2634,8 @@ function switchView(id,btn){
   const isCal=id==='cal';
   document.getElementById('subbar').style.display=isCal?'flex':'none';
   document.getElementById('legbar').style.display=isCal?'flex':'none';
+  // Reset category filter when switching tabs
+  currentFilterCat=null;
   // Update currentSidebarKey based on view
   const viewKeyMap={cal:'semana',nexus:'nexus',rotina:'rotina'};
   if(viewKeyMap[id]) currentSidebarKey=viewKeyMap[id];
@@ -2997,17 +2999,29 @@ function renderTaskPanelForKey(key, filterCatId=null){
   }
   if(!map||map.mode==='task_tab'){
     title='tasks';
-    const _catIdSet=new Set(CATEGORIES.map(c=>c.id));
+    // Collect from TASK_DATA (manually added tasks)
     allTasks=[...TASK_DATA.semana,...TASK_DATA.mes].map(t=>({
       id:t.id, label:t.label, note:t.note||'',
       catId:t.catId, due:t.due, alarm:t.alarm, priority:t.priority,
       subtasks:t.subtasks,
     }));
+    // Also collect from ALL CARD_DEFS_BY_TAB (kanban tasks)
+    Object.entries(CARD_DEFS_BY_TAB).forEach(([tabId,defs])=>{
+      defs.forEach(card=>{
+        card.tasks.forEach(t=>{
+          allTasks.push({
+            id:t.id, label:t.l||'', note:t.n||'',
+            catId:card.id, due:t.due||'', alarm:t.alarm||'',
+            time:t.time||'', duration:t.duration||'',
+            priority:t.priority||4, subtasks:t.subtasks||[],
+            _bg:card.iconBg, _color:card.color
+          });
+        });
+      });
+    });
     // Deduplicate
     const seen=new Set();
     allTasks=allTasks.filter(t=>{if(seen.has(t.id))return false;seen.add(t.id);return true;});
-    // Only show tasks whose catId is a top-level category or empty (not a card id)
-    allTasks=allTasks.filter(t=>!t.catId||_catIdSet.has(t.catId)||t.catId==='outros');
     addCatId=null;
   } else if(map.mode==='checklist'){
     title=map.label.toLowerCase();
