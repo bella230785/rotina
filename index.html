@@ -5474,7 +5474,7 @@ loadState();
 // Re-renderizar com dados carregados
 renderCal();sidebarNav('semana');renderPicker();renderSidebarCats();updateSidebarWidgets();populateTimeSelects();
 // Carregar dados da nuvem (sobrescreve localStorage)
-loadFromSheetDB();
+setTimeout(loadFromSheetDB, 100);
 
 // Auto-salvar em qualquer interação relevante —
 // interceptar as funções que mudam estado
