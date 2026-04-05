@@ -5559,9 +5559,11 @@ function initTaskPanelResize(){
 initTaskPanelResize();
 
 // ═══════════════════════════════════════════
-// APPS SCRIPT SYNC — Google Sheets via Apps Script (gratuito, sem limite)
+// SUPABASE SYNC — sincronização gratuita e sem CORS
 // ═══════════════════════════════════════════
-// SYNC_URL moved to top
+const SB_URL = 'https://tatvymywnvnwrpzyrwey.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhdHZ5bXl3bnZud3Jwenlyd2V5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MDk0NjAsImV4cCI6MjA5MDk4NTQ2MH0.YqvTESy8OC7IOPkAnMWQzvBjV5DDx47xNkI3u0ry5f8';
+const SB_TABLE = 'dashboard';
 let _syncTimeout = null;
 let _lastSync = 0;
 
@@ -5572,8 +5574,16 @@ function showSyncStatus(s){
   const colors = {syncing:'var(--g400)', ok:'#81c784', error:'#e57373', idle:'var(--g300)'};
   el.textContent = map[s]||'';
   el.style.color = colors[s]||'';
-  el.title = s==='error'?'Erro ao sincronizar':s==='ok'?'Salvo na nuvem':'';
   if(s==='ok') setTimeout(()=>showSyncStatus('idle'), 3000);
+}
+
+function sbHeaders(){
+  return {
+    'Content-Type': 'application/json',
+    'apikey': SB_KEY,
+    'Authorization': 'Bearer '+SB_KEY,
+    'Prefer': 'return=minimal'
+  };
 }
 
 function buildSnapshot(){
@@ -5594,47 +5604,52 @@ async function syncToAppsScript(){
   showSyncStatus('syncing');
   try{
     const snapshot = buildSnapshot();
-    // Use no-cors for POST (fire and forget - CORS blocks reading response)
-    await fetch(SYNC_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {'Content-Type':'text/plain'},
-      body: JSON.stringify({action:'save', value:snapshot})
+    // Check if row exists
+    const checkResp = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?select=id&limit=1`, {
+      headers: sbHeaders()
     });
+    const rows = await checkResp.json();
+    
+    if(rows && rows.length > 0){
+      // Update existing row
+      await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?id=eq.${rows[0].id}`, {
+        method: 'PATCH',
+        headers: sbHeaders(),
+        body: JSON.stringify({value: snapshot})
+      });
+    } else {
+      // Insert new row
+      await fetch(`${SB_URL}/rest/v1/${SB_TABLE}`, {
+        method: 'POST',
+        headers: {...sbHeaders(), 'Prefer': 'return=minimal'},
+        body: JSON.stringify({value: snapshot})
+      });
+    }
+    
     _lastSync = Date.now();
     localStorage.setItem(LS+'syncTs', _lastSync);
     showSyncStatus('ok');
   } catch(e){
-    console.error('Sync error:', e);
+    console.error('Supabase sync error:', e);
     showSyncStatus('error');
   }
-}
-
-function loadViaJSONP(url){
-  return new Promise((resolve, reject)=>{
-    const cbName = '_cb_'+Date.now();
-    const script = document.createElement('script');
-    const timer = setTimeout(()=>{ delete window[cbName]; script.remove(); reject(new Error('timeout')); }, 10000);
-    window[cbName] = (data)=>{ clearTimeout(timer); delete window[cbName]; script.remove(); resolve(data); };
-    script.src = url + '&callback='+cbName;
-    script.onerror = ()=>{ clearTimeout(timer); delete window[cbName]; reject(new Error('script error')); };
-    document.head.appendChild(script);
-  });
 }
 
 async function loadFromAppsScript(){
   showSyncStatus('syncing');
   try{
-    const result = await loadViaJSONP(SYNC_URL+'?action=load');
+    const resp = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?select=value&limit=1&order=id.desc`, {
+      headers: sbHeaders()
+    });
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const rows = await resp.json();
     
-    if(!result.value){
+    if(!rows || rows.length === 0 || !rows[0].value){
       showSyncStatus('idle');
-      return; // No cloud data yet
+      return;
     }
     
-    const snap = JSON.parse(result.value);
-    
-    // Only apply if cloud is newer than local
+    const snap = JSON.parse(rows[0].value);
     const localTs = parseInt(localStorage.getItem(LS+'syncTs')||'0');
     if(snap.ts && snap.ts <= localTs){
       showSyncStatus('idle');
@@ -5652,21 +5667,20 @@ async function loadFromAppsScript(){
     if(snap.weekStore) Object.keys(snap.weekStore).forEach(k=>{ weekStore[k]=snap.weekStore[k]; });
     
     localStorage.setItem(LS+'syncTs', snap.ts||Date.now());
-    
     showSyncStatus('ok');
     renderCal();
     renderSidebarCats();
     renderTaskPanelForKey('semana');
     renderPicker();
   } catch(e){
-    console.warn('Load failed, using localStorage:', e);
+    console.warn('Supabase load failed, using localStorage:', e);
     showSyncStatus('idle');
   }
 }
 
-// Aliases para compatibilidade
 var syncToSheetDB = syncToAppsScript;
 var loadFromSheetDB = loadFromAppsScript;
+
 
 // Debounced auto-sync on every saveState call
 const _origSaveState = saveState;
