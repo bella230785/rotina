@@ -5663,8 +5663,8 @@ async function loadFromAppsScript(){
 }
 
 // Aliases para compatibilidade
-const syncToSheetDB = syncToAppsScript;
-const loadFromSheetDB = loadFromAppsScript;
+var syncToSheetDB = syncToAppsScript;
+var loadFromSheetDB = loadFromAppsScript;
 
 // Debounced auto-sync on every saveState call
 const _origSaveState = saveState;
