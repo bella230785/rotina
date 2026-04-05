@@ -5681,6 +5681,28 @@ async function syncToSheetDB(){
   }
 }
 
+
+function applySnapshot(snap){
+  if(snap.TASK_DATA){ Object.assign(TASK_DATA, snap.TASK_DATA); }
+  if(snap.CATEGORIES && snap.CATEGORIES.length){ CATEGORIES.length=0; snap.CATEGORIES.forEach(c=>CATEGORIES.push(c)); }
+  if(snap.CARD_DEFS_BY_TAB){ Object.keys(snap.CARD_DEFS_BY_TAB).forEach(tab=>{ CARD_DEFS_BY_TAB[tab]=snap.CARD_DEFS_BY_TAB[tab]; }); }
+  if(snap.taskDoneState){ Object.assign(taskDoneState, snap.taskDoneState); }
+  if(snap.scheduledTasks){ snap.scheduledTasks.forEach(id=>scheduledTasks.add(id)); }
+  if(snap.clChecked){ Object.assign(clChecked, snap.clChecked); }
+  if(snap.calState){ for(let d=0;d<7;d++) calState[d]=snap.calState[d]||{}; }
+  if(snap.weekStore){ Object.keys(snap.weekStore).forEach(k=>{ weekStore[k]=snap.weekStore[k]; }); }
+}
+
+function applyOldFormat(row, allRows){
+  try{
+    if(row.CATEGORIES){ const cats=JSON.parse(row.CATEGORIES); if(cats.length){CATEGORIES.length=0;cats.forEach(c=>CATEGORIES.push(c));} }
+    if(row.CARD_DEFS){ const cd=JSON.parse(row.CARD_DEFS); Object.keys(cd).forEach(tab=>{CARD_DEFS_BY_TAB[tab]=cd[tab];}); }
+    if(row.taskDoneState){ Object.assign(taskDoneState,JSON.parse(row.taskDoneState)); }
+    if(row.scheduledTasks){ JSON.parse(row.scheduledTasks).forEach(id=>scheduledTasks.add(id)); }
+    if(row.clChecked){ Object.assign(clChecked,JSON.parse(row.clChecked)); }
+  }catch(e){ console.warn('applyOldFormat error:', e); }
+}
+
 async function loadFromSheetDB(){
   showSyncStatus('syncing');
   try{
@@ -5688,13 +5710,27 @@ async function loadFromSheetDB(){
     if(!resp.ok) throw new Error('fetch failed: '+resp.status);
     const rows = await resp.json();
     
-    const row = rows.find(r=>r.key==='snapshot');
-    if(!row || !row.value){
+    // Support both old format (key=main) and new format (key=snapshot)
+    const snapRow = rows.find(r=>r.key==='snapshot');
+    const mainRow = rows.find(r=>r.key==='main');
+    
+    if(snapRow && snapRow.value){
+      // New format: single JSON blob
+      const snap = JSON.parse(snapRow.value);
+      const localTs = parseInt(localStorage.getItem(LS+'syncTs')||'0');
+      if(snap.ts <= localTs){ showSyncStatus('idle'); return; }
+      applySnapshot(snap);
+      localStorage.setItem(LS+'syncTs', snap.ts);
+    } else if(mainRow){
+      // Old format: separate fields
+      applyOldFormat(mainRow, rows);
+    } else {
       showSyncStatus('idle');
-      return; // No cloud data yet, use localStorage
+      return;
     }
     
-    const snap = JSON.parse(row.value);
+    // fake snap for rest of function
+    const snap = {ts: Date.now()};
     
     // Only load if cloud data is newer than localStorage
     const localTs = parseInt(localStorage.getItem(LS+'syncTs')||'0');
@@ -5703,18 +5739,7 @@ async function loadFromSheetDB(){
       return;
     }
     
-    // Apply cloud state
-    if(snap.TASK_DATA){ Object.assign(TASK_DATA, snap.TASK_DATA); }
-    if(snap.CATEGORIES && snap.CATEGORIES.length){ CATEGORIES.length=0; snap.CATEGORIES.forEach(c=>CATEGORIES.push(c)); }
-    if(snap.CARD_DEFS_BY_TAB){ Object.keys(snap.CARD_DEFS_BY_TAB).forEach(tab=>{ CARD_DEFS_BY_TAB[tab]=snap.CARD_DEFS_BY_TAB[tab]; }); }
-    if(snap.taskDoneState){ Object.assign(taskDoneState, snap.taskDoneState); }
-    if(snap.scheduledTasks){ snap.scheduledTasks.forEach(id=>scheduledTasks.add(id)); }
-    if(snap.clChecked){ Object.assign(clChecked, snap.clChecked); }
-    if(snap.calState){ for(let d=0;d<7;d++) calState[d]=snap.calState[d]||{}; }
-    if(snap.weekStore){ Object.keys(snap.weekStore).forEach(k=>{ weekStore[k]=snap.weekStore[k]; }); }
-    
-    // Mark as loaded
-    localStorage.setItem(LS+'syncTs', snap.ts);
+    // Data applied above
     
     showSyncStatus('ok');
     setTimeout(()=>showSyncStatus('idle'), 2000);
