@@ -2672,12 +2672,14 @@ function switchView(id,btn){
 function shiftWeek(dir){
   if(calViewMode!=='semana'){ calViewMode='semana'; document.querySelector('#view-semana-btn')?.click(); return; }
   saveCurrentWeek();
+  saveState();
   weekOffset+=dir;
   loadWeek(weekOffset);
   renderCal();
 }
 function goToday(){
   saveCurrentWeek();
+  saveState();
   weekOffset=0;calViewMode='semana';
   document.querySelectorAll('.btn-group-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('view-semana-btn')?.classList.add('active');
