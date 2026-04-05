@@ -1992,7 +1992,7 @@ function renderCalDay(){
         if(draggingTask){const t=draggingTask;const cat=getCat(t.catId);const label=t.label.length>26?t.label.slice(0,24)+'…':t.label;
           const slots=parseDurationToSlots(t.duration||'');
           for(let k=0;k<slots&&si+k<SLOTS;k++) calState[dayIdx][si+k]={bg:t._bg||cat.bg,color:t._color||cat.color,label,sub:cat.name||'',taskId:t.id};
-          if(t.id) scheduledTasks.add(t.id);renderCal();draggingTask=null;return;}
+          if(t.id) scheduledTasks.add(t.id);renderCal();saveState();draggingTask=null;return;}
         if(dragSrc){const{day:sd,slot:ss}=dragSrc;const srcLen=getBlockLen(sd,ss);
           const srcData=Array.from({length:srcLen},(_,i)=>calState[sd][ss+i]||null);
           for(let i=0;i<srcLen;i++) calState[sd][ss+i]=null;
@@ -2435,7 +2435,7 @@ function makeBlock(bd,di,si,span=2){
     // Botão deletar
     const acts=document.createElement('div');acts.className='bacts';
     const del=document.createElement('button');del.className='bact';del.innerHTML='&times;';
-    del.onclick=e=>{e.stopPropagation();const len=getBlockLen(di,si);for(let k=0;k<len;k++) calState[di][si+k]=null;renderCal();};
+    del.onclick=e=>{e.stopPropagation();const len=getBlockLen(di,si);for(let k=0;k<len;k++) calState[di][si+k]=null;renderCal();saveState();};
     acts.appendChild(del);b.appendChild(acts);
     // Drag do bloco
     b.draggable=true;
@@ -2476,6 +2476,7 @@ function startBlockResize(e,di,si,blockEl){
     resizing=null;
     document.removeEventListener('mousemove',onMove);
     document.removeEventListener('mouseup',onUp);
+    saveState();
   }
   document.addEventListener('mousemove',onMove);
   document.addEventListener('mouseup',onUp);
@@ -2504,6 +2505,7 @@ function startBlockResizeTop(e,di,si,blockEl){
   function onUp(){
     document.removeEventListener('mousemove',onMove);
     document.removeEventListener('mouseup',onUp);
+    saveState();
   }
   document.addEventListener('mousemove',onMove);
   document.addEventListener('mouseup',onUp);
@@ -2540,7 +2542,7 @@ function openPicker(di,si,el){
   saveState();
 }
 function closePicker(){document.getElementById('picker').classList.remove('open');pickerTarget=null;}
-function pick(type,label,sub,bg,color){if(!pickerTarget)return;const{di,si}=pickerTarget;calState[di][si]={type,label,sub,bg,color};closePicker();renderCal();}
+function pick(type,label,sub,bg,color){if(!pickerTarget)return;const{di,si}=pickerTarget;calState[di][si]={type,label,sub,bg,color};closePicker();renderCal();saveState();}
 document.addEventListener('click',e=>{if(!e.target.closest('#picker')&&!e.target.closest('.add-btn'))closePicker();});
 
 // NEXUS
@@ -4141,7 +4143,7 @@ function saveDetailField(field, value){
               calState[rdi][si+k]={bg:cat.bg,color:cat.color,label,sub:cat.name||'',taskId:t.id+'_r'+rdi};
           });
         }
-        setTimeout(()=>renderCal(),50);
+        setTimeout(()=>{renderCal();saveState();},50);
       }
     }
   }
