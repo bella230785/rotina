@@ -5605,14 +5605,14 @@ async function syncToAppsScript(){
   try{
     const snapshot = buildSnapshot();
     // Check if row exists
-    const checkResp = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?select=id&limit=1`, {
+    const checkResp = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?select=*&limit=1`, {
       headers: sbHeaders()
     });
     const rows = await checkResp.json();
     
     if(rows && rows.length > 0){
       // Update existing row
-      await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?id=eq.${rows[0].id}`, {
+      await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?created_at=eq.${encodeURIComponent(rows[0].created_at)}`, {
         method: 'PATCH',
         headers: sbHeaders(),
         body: JSON.stringify({value: snapshot})
@@ -5638,7 +5638,7 @@ async function syncToAppsScript(){
 async function loadFromAppsScript(){
   showSyncStatus('syncing');
   try{
-    const resp = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?select=value&limit=1&order=id.desc`, {
+    const resp = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?select=value&limit=1`, {
       headers: sbHeaders()
     });
     if(!resp.ok) throw new Error('HTTP '+resp.status);
