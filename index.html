@@ -3422,7 +3422,7 @@ function filterTasksBy(catId){
     Object.values(CARD_DEFS_BY_TAB).flat().forEach(card=>{
       if(card.id!==catId) return;
       card.tasks.forEach(t=>allTasks.push({
-        id:t.id,label:t.l||'',note:t.n||'',catId:card.id,
+        id:t.id,label:t.l||'',note:stripHTML(t.n||''),catId:card.id,
         due:t.due||'',alarm:t.alarm||'',time:t.time||'',duration:t.duration||'',
         priority:t.priority||4,subtasks:t.subtasks||[],
         _bg:card.iconBg,_color:card.color
@@ -5557,6 +5557,14 @@ initTaskPanelResize();
 // ═══════════════════════════════════════════
 // SHEETDB SYNC — sincronização com Google Sheets via SheetDB
 // ═══════════════════════════════════════════
+function stripHTML(html){
+  if(!html) return '';
+  // Remove HTML tags and decode entities
+  return html.replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'')
+    .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+    .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'').trim();
+}
+
 const SHEETDB_URL = 'https://sheetdb.io/api/v1/bkug9ewtgxrgt';
 let _syncTimeout = null;
 let _lastSync = 0;
@@ -5577,7 +5585,7 @@ function buildPayload(){
   // tasks
   const tasks = [];
   [...TASK_DATA.semana,...TASK_DATA.mes].forEach(t=>{
-    tasks.push({id:t.id,label:t.label||'',note:t.note||'',catId:t.catId||'',
+    tasks.push({id:t.id,label:t.label||'',note:stripHTML(t.note||''),catId:t.catId||'',
       due:t.due||'',time:t.time||'',duration:t.duration||'',recurrence:t.recurrence||'',
       alarm:t.alarm||'',priority:t.priority||4,done:taskDoneState[t.id]?1:0,source:'semana'});
   });
@@ -5586,7 +5594,7 @@ function buildPayload(){
     defs.forEach(card=>{
       card.tasks.forEach(t=>{
         if(addedIds.has(t.id)) return; addedIds.add(t.id);
-        tasks.push({id:t.id,label:t.l||'',note:t.n||'',catId:card.id,
+        tasks.push({id:t.id,label:t.l||'',note:stripHTML(t.n||''),catId:card.id,
           due:t.due||'',time:t.time||'',duration:t.duration||'',recurrence:t.recurrence||'',
           alarm:t.alarm||'',priority:t.priority||4,done:clChecked[card.id+'-'+t.id]?1:0,source:tabId});
       });
@@ -5632,9 +5640,7 @@ async function syncToSheetDB(){
     for(const [sheet, rows] of Object.entries(payload)){
       if(!rows.length) continue;
       // Delete existing
-      await fetch(`${SHEETDB_URL}?sheet=${sheet}`, {method:'DELETE',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({data:'all'})});
+      await fetch(`${SHEETDB_URL}/all?sheet=${sheet}`, {method:'DELETE'});
       // Insert new
       await fetch(`${SHEETDB_URL}?sheet=${sheet}`, {method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -5668,7 +5674,7 @@ async function loadFromSheetDB(){
       TASK_DATA.semana=[]; TASK_DATA.mes=[];
       taskRows.forEach(t=>{
         if(!t.id) return;
-        const task={id:t.id,label:t.label||'',note:t.note||'',catId:t.catId||'',
+        const task={id:t.id,label:t.label||'',note:stripHTML(t.note||''),catId:t.catId||'',
           due:t.due||'',time:t.time||'',duration:t.duration||'',recurrence:t.recurrence||'',
           alarm:t.alarm||'',priority:parseInt(t.priority)||4,done:t.done==='1'||t.done===1,subtasks:[]};
         if(t.source==='semana'||!t.source) TASK_DATA.semana.push(task);
