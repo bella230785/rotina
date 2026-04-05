@@ -5558,17 +5558,9 @@ function initTaskPanelResize(){
 initTaskPanelResize();
 
 // ═══════════════════════════════════════════
-// SHEETDB SYNC — sincronização com Google Sheets via SheetDB
+// APPS SCRIPT SYNC — Google Sheets via Apps Script (gratuito, sem limite)
 // ═══════════════════════════════════════════
-function stripHTML(html){
-  if(!html) return '';
-  // Remove HTML tags and decode entities
-  return html.replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'')
-    .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
-    .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'').trim();
-}
-
-const SHEETDB_URL = 'https://sheetdb.io/api/v1/bkug9ewtgxrgt';
+const SYNC_URL = 'https://script.google.com/macros/s/AKfycbyHeKdHO9rAcHREV3JBKaAOFubd5OgWxLxD_7VsNK_fUYWDD-BT0MaCuNocc7nWdpwm/exec';
 let _syncTimeout = null;
 let _lastSync = 0;
 
@@ -5583,177 +5575,95 @@ function showSyncStatus(s){
   if(s==='ok') setTimeout(()=>showSyncStatus('idle'), 3000);
 }
 
-// Serializa todo o estado em uma única linha JSON por aba
-function buildPayload(){
-  // tasks
-  const tasks = [];
-  [...TASK_DATA.semana,...TASK_DATA.mes].forEach(t=>{
-    tasks.push({id:t.id,label:t.label||'',note:stripHTML(t.note||''),catId:t.catId||'',
-      due:t.due||'',time:t.time||'',duration:t.duration||'',recurrence:t.recurrence||'',
-      alarm:t.alarm||'',priority:t.priority||4,done:taskDoneState[t.id]?1:0,source:'semana'});
+function buildSnapshot(){
+  return JSON.stringify({
+    ts: Date.now(),
+    TASK_DATA,
+    CARD_DEFS_BY_TAB,
+    CATEGORIES,
+    taskDoneState,
+    scheduledTasks: [...scheduledTasks],
+    clChecked,
+    calState,
+    weekStore
   });
-  const addedIds = new Set(tasks.map(t=>t.id));
-  Object.entries(CARD_DEFS_BY_TAB).forEach(([tabId,defs])=>{
-    defs.forEach(card=>{
-      card.tasks.forEach(t=>{
-        if(addedIds.has(t.id)) return; addedIds.add(t.id);
-        tasks.push({id:t.id,label:t.l||'',note:stripHTML(t.n||''),catId:card.id,
-          due:t.due||'',time:t.time||'',duration:t.duration||'',recurrence:t.recurrence||'',
-          alarm:t.alarm||'',priority:t.priority||4,done:clChecked[card.id+'-'+t.id]?1:0,source:tabId});
-      });
-    });
-  });
-
-  // calendar — current + stored weeks
-  const calendar = [];
-  const cwk = currentWeekTag();
-  for(let d=0;d<7;d++){
-    Object.entries(calState[d]||{}).forEach(([si,bd])=>{
-      if(bd) calendar.push({weekTag:cwk,day:d,slot:si,label:bd.label||'',sub:bd.sub||'',
-        bg:bd.bg||'',color:bd.color||'',taskId:bd.taskId||'',fixed:bd.fixed?1:0});
-    });
-  }
-  Object.entries(weekStore).forEach(([wk,days])=>{
-    Object.entries(days).forEach(([d,slots])=>{
-      Object.entries(slots).forEach(([si,bd])=>{
-        if(bd) calendar.push({weekTag:wk,day:d,slot:si,label:bd.label||'',sub:bd.sub||'',
-          bg:bd.bg||'',color:bd.color||'',taskId:bd.taskId||'',fixed:bd.fixed?1:0});
-      });
-    });
-  });
-
-  // state — one row with all state as JSON
-  const state = [{
-    key:'main',
-    taskDoneState: JSON.stringify(taskDoneState),
-    scheduledTasks: JSON.stringify([...scheduledTasks]),
-    clChecked: JSON.stringify(clChecked),
-    CATEGORIES: JSON.stringify(CATEGORIES),
-    CARD_DEFS: JSON.stringify(CARD_DEFS_BY_TAB)
-  }];
-
-  return {tasks, calendar, state};
 }
 
-async function syncToSheetDB(){
+async function syncToAppsScript(){
   showSyncStatus('syncing');
   try{
-    // Serialize entire app state as single JSON blob
-    const snapshot = {
-      ts: Date.now(),
-      TASK_DATA: TASK_DATA,
-      CARD_DEFS_BY_TAB: CARD_DEFS_BY_TAB,
-      CATEGORIES: CATEGORIES,
-      taskDoneState: taskDoneState,
-      scheduledTasks: [...scheduledTasks],
-      clChecked: clChecked,
-      calState: calState,
-      weekStore: weekStore
-    };
-    const json = JSON.stringify(snapshot);
+    const snapshot = buildSnapshot();
+    // Verify snapshot has real data before saving
+    const parsed = JSON.parse(snapshot);
+    const hasData = (parsed.TASK_DATA?.semana?.length > 0) ||
+      Object.values(parsed.CARD_DEFS_BY_TAB||{}).some(defs=>defs.some(c=>c.tasks?.length>0)) ||
+      Object.keys(parsed.calState||{}).some(d=>Object.keys(parsed.calState[d]||{}).length>0);
     
-    // Read current state row to get row count
-    const getResp = await fetch(`${SHEETDB_URL}?sheet=state&limit=1`);
-    const existing = getResp.ok ? await getResp.json() : [];
-    
-    if(existing.length > 0){
-      // Update existing row
-      await fetch(`${SHEETDB_URL}/key/snapshot?sheet=state`, {
-        method:'PATCH',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({data:{key:'snapshot',value:json}})
-      });
-    } else {
-      // Insert new row
-      await fetch(`${SHEETDB_URL}?sheet=state`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({data:[{key:'snapshot',value:json}]})
-      });
-    }
+    const resp = await fetch(SYNC_URL, {
+      method: 'POST',
+      headers: {'Content-Type':'text/plain'},
+      body: JSON.stringify({action:'save', value:snapshot})
+    });
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const result = await resp.json();
+    if(!result.ok) throw new Error(JSON.stringify(result));
     
     _lastSync = Date.now();
     localStorage.setItem(LS+'syncTs', _lastSync);
     showSyncStatus('ok');
-  } catch(e){ 
-    console.error('SheetDB sync error:', e); 
-    showSyncStatus('error'); 
+  } catch(e){
+    console.error('Sync error:', e);
+    showSyncStatus('error');
   }
 }
 
-
-function applySnapshot(snap){
-  if(snap.TASK_DATA){ Object.assign(TASK_DATA, snap.TASK_DATA); }
-  if(snap.CATEGORIES && snap.CATEGORIES.length){ CATEGORIES.length=0; snap.CATEGORIES.forEach(c=>CATEGORIES.push(c)); }
-  if(snap.CARD_DEFS_BY_TAB){ Object.keys(snap.CARD_DEFS_BY_TAB).forEach(tab=>{ CARD_DEFS_BY_TAB[tab]=snap.CARD_DEFS_BY_TAB[tab]; }); }
-  if(snap.taskDoneState){ Object.assign(taskDoneState, snap.taskDoneState); }
-  if(snap.scheduledTasks){ snap.scheduledTasks.forEach(id=>scheduledTasks.add(id)); }
-  if(snap.clChecked){ Object.assign(clChecked, snap.clChecked); }
-  if(snap.calState){ for(let d=0;d<7;d++) calState[d]=snap.calState[d]||{}; }
-  if(snap.weekStore){ Object.keys(snap.weekStore).forEach(k=>{ weekStore[k]=snap.weekStore[k]; }); }
-}
-
-function applyOldFormat(row, allRows){
-  try{
-    if(row.CATEGORIES){ const cats=JSON.parse(row.CATEGORIES); if(cats.length){CATEGORIES.length=0;cats.forEach(c=>CATEGORIES.push(c));} }
-    if(row.CARD_DEFS){ const cd=JSON.parse(row.CARD_DEFS); Object.keys(cd).forEach(tab=>{CARD_DEFS_BY_TAB[tab]=cd[tab];}); }
-    if(row.taskDoneState){ Object.assign(taskDoneState,JSON.parse(row.taskDoneState)); }
-    if(row.scheduledTasks){ JSON.parse(row.scheduledTasks).forEach(id=>scheduledTasks.add(id)); }
-    if(row.clChecked){ Object.assign(clChecked,JSON.parse(row.clChecked)); }
-  }catch(e){ console.warn('applyOldFormat error:', e); }
-}
-
-async function loadFromSheetDB(){
+async function loadFromAppsScript(){
   showSyncStatus('syncing');
   try{
-    const resp = await fetch(`${SHEETDB_URL}?sheet=state`);
-    if(!resp.ok) throw new Error('fetch failed: '+resp.status);
-    const rows = await resp.json();
+    const resp = await fetch(SYNC_URL+'?action=load');
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const result = await resp.json();
     
-    // Support both old format (key=main) and new format (key=snapshot)
-    const snapRow = rows.find(r=>r.key==='snapshot');
-    const mainRow = rows.find(r=>r.key==='main');
-    
-    if(snapRow && snapRow.value){
-      // New format: single JSON blob
-      const snap = JSON.parse(snapRow.value);
-      const localTs = parseInt(localStorage.getItem(LS+'syncTs')||'0');
-      if(snap.ts <= localTs){ showSyncStatus('idle'); return; }
-      applySnapshot(snap);
-      localStorage.setItem(LS+'syncTs', snap.ts);
-    } else if(mainRow){
-      // Old format: separate fields
-      applyOldFormat(mainRow, rows);
-    } else {
+    if(!result.value){
       showSyncStatus('idle');
-      return;
+      return; // No cloud data yet
     }
     
-    // fake snap for rest of function
-    const snap = {ts: Date.now()};
+    const snap = JSON.parse(result.value);
     
-    // Only load if cloud data is newer than localStorage
+    // Only apply if cloud is newer than local
     const localTs = parseInt(localStorage.getItem(LS+'syncTs')||'0');
-    if(snap.ts <= localTs){
+    if(snap.ts && snap.ts <= localTs){
       showSyncStatus('idle');
       return;
     }
     
-    // Data applied above
+    // Apply snapshot
+    if(snap.TASK_DATA) Object.assign(TASK_DATA, snap.TASK_DATA);
+    if(snap.CATEGORIES?.length){ CATEGORIES.length=0; snap.CATEGORIES.forEach(c=>CATEGORIES.push(c)); }
+    if(snap.CARD_DEFS_BY_TAB) Object.keys(snap.CARD_DEFS_BY_TAB).forEach(tab=>{ CARD_DEFS_BY_TAB[tab]=snap.CARD_DEFS_BY_TAB[tab]; });
+    if(snap.taskDoneState) Object.assign(taskDoneState, snap.taskDoneState);
+    if(snap.scheduledTasks) snap.scheduledTasks.forEach(id=>scheduledTasks.add(id));
+    if(snap.clChecked) Object.assign(clChecked, snap.clChecked);
+    if(snap.calState) for(let d=0;d<7;d++) calState[d]=snap.calState[d]||{};
+    if(snap.weekStore) Object.keys(snap.weekStore).forEach(k=>{ weekStore[k]=snap.weekStore[k]; });
+    
+    localStorage.setItem(LS+'syncTs', snap.ts||Date.now());
     
     showSyncStatus('ok');
-    setTimeout(()=>showSyncStatus('idle'), 2000);
-    
-    // Re-render with cloud data
     renderCal();
     renderSidebarCats();
     renderTaskPanelForKey('semana');
     renderPicker();
-  } catch(e){ 
-    console.warn('SheetDB load failed, using localStorage:', e);
+  } catch(e){
+    console.warn('Load failed, using localStorage:', e);
     showSyncStatus('idle');
   }
 }
+
+// Aliases para compatibilidade
+const syncToSheetDB = syncToAppsScript;
+const loadFromSheetDB = loadFromAppsScript;
 
 // Debounced auto-sync on every saveState call
 const _origSaveState = saveState;
