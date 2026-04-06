@@ -582,7 +582,7 @@ body{
 }
 .kanban-card-cb{
   width:15px;height:15px;border-radius:50%;
-  border:1.5px solid var(--g300);flex-shrink:0;margin-top:1px;
+  border:1.5px solid var(--g300);flex-shrink:0;margin-top:0;
   cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;
 }
 .kanban-card-cb:hover{border-color:var(--accent);}
@@ -1357,10 +1357,12 @@ function renderChecklist(tabId, wrapId){
   if(!window._activeChip) window._activeChip={};
   const activeCard=window._activeChip[tabId]||null;
   bar.innerHTML=defs.map(card=>
-    `<button class="kv-btn${activeCard===card.id?' active':''}"
-      onclick="setChecklistChip('${tabId}','${wrapId}','${card.id}')"
-      ondblclick="event.stopPropagation();renameChip('${tabId}','${wrapId}','${card.id}',this)"
-      title="Duplo clique para renomear">${card.title}</button>`
+    `<span style="display:inline-flex;align-items:center;gap:0;">
+      <button class="kv-btn${activeCard===card.id?' active':''}"
+        onclick="setChecklistChip('${tabId}','${wrapId}','${card.id}')">${card.title}</button>
+      <button onclick="renameChip('${tabId}','${wrapId}','${card.id}',this.previousElementSibling)"
+        style="background:none;border:none;cursor:pointer;font-size:9px;color:var(--g300);padding:0 2px 0 0;line-height:1;" title="Renomear">✎</button>
+    </span>`
   ).join('')+
   `<div style="width:1px;height:16px;background:var(--g150);margin:0 4px"></div>`+
   `<div style="margin-left:auto"><button class="kv-btn" onclick="addTabCategory('${tabId}')" style="border-style:dashed">＋ categoria</button></div>`;
@@ -4772,8 +4774,9 @@ function renderSidebarCats(){
     el.addEventListener('dragend',()=>{ el.style.opacity=''; _dragCatId=null; el.style.borderTop=''; });
     el.addEventListener('dragover',e=>{
       if(_dragCatId && _dragCatId!==cat.id){ e.preventDefault(); el.style.borderTop='2px solid var(--accent)'; }
-      else if(draggingTask){ e.preventDefault(); }
+      else if(!_dragCatId){ e.preventDefault(); el.style.background='var(--accent-l)'; }
     });
+    el.addEventListener('dragleave',()=>{ el.style.borderTop=''; el.style.background=''; });
     el.addEventListener('dragleave',()=>el.style.borderTop='');
     el.addEventListener('drop',e=>{
       el.style.borderTop='';
@@ -4784,9 +4787,11 @@ function renderSidebarCats(){
         if(fromIdx>=0&&toIdx>=0){ const [m]=CATEGORIES.splice(fromIdx,1); CATEGORIES.splice(toIdx,0,m); }
         saveState(); renderSidebarCats(); return;
       }
-      if(draggingTask){
-        e.preventDefault();
-        reassignTaskCategory(draggingTask.id, cat.id);
+      // Handle task drop - use dataTransfer since draggingTask may be null by drop time
+      e.preventDefault();
+      const _taskId=e.dataTransfer.getData('text/plain');
+      if(_taskId && !_dragCatId){
+        reassignTaskCategory(_taskId, cat.id);
         draggingTask=null;
       }
     });
