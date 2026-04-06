@@ -181,6 +181,9 @@ body{
 .tp-cat-group-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .tp-cat-group-name{font-size:12px;font-weight:600;color:var(--g700);flex:1;}
 .tp-cat-group-count{font-size:10px;color:var(--g400);background:var(--g100);padding:1px 6px;border-radius:20px;}
+.tp-sort-btn{font-size:10px;color:var(--g400);background:none;border:1px solid var(--g150);border-radius:20px;padding:2px 8px;cursor:pointer;font-family:inherit;transition:all .12s;}
+.tp-sort-btn:hover{color:var(--g700);border-color:var(--g300);}
+.tp-sort-btn.active{color:var(--accent);border-color:var(--accent);background:var(--accent-l);}
 .tp-cat-done-toggle{
   display:flex;align-items:center;gap:6px;
   padding:5px 16px;cursor:pointer;
@@ -951,6 +954,11 @@ iframe.embed{flex:1;border:none;width:100%;height:100%;}
   <div class="task-panel-resize-r" id="tp-resize-r"></div>
   <div class="task-panel-hdr" id="task-panel-hdr">
     <div class="task-panel-cat-title" id="tp-cat-title">tasks</div>
+      <div id="tp-sort-bar" style="display:flex;gap:4px;padding:4px 12px 6px;border-bottom:1px solid var(--g100);">
+        <button onclick="setTaskSort('priority')" id="sort-priority" class="tp-sort-btn active">↑ prior.</button>
+        <button onclick="setTaskSort('date')" id="sort-date" class="tp-sort-btn">📅 data</button>
+        <button onclick="setTaskSort('recent')" id="sort-recent" class="tp-sort-btn">⟳ recent</button>
+      </div>
     <div class="tp-add-wrap" onclick="document.getElementById('tp-add-input').focus()">
       <input class="tp-add-input" id="tp-add-input"
         placeholder="＋ Adicionar tarefa…"
@@ -1400,9 +1408,10 @@ function makeKanbanCol(tabId, card, dayMode=false){
     <div class="kanban-col-hdr" onclick="toggleKanbanColBody('${card.id}')" style="cursor:pointer;">
       <span id="kchev-${card.id}" style="font-size:10px;color:var(--g300);width:12px;flex-shrink:0;">${isHidden?'›':'∨'}</span>
       <div class="kanban-col-dot" style="background:${card.iconBg==='var(--g50)'?'var(--g300)':card.iconBg}"></div>
-      <div class="kanban-col-title">${card.title}</div>
+      <div class="kanban-col-title" ondblclick="editCardTitle('${card.id}','${tabId}',this)" title="Duplo clique para editar">${card.title}</div>
       <span class="kanban-col-count">${total}</span>
       ${!dayMode?`<div class="kanban-col-actions" onclick="event.stopPropagation()">
+        <button class="kanban-col-btn" onclick="pickCardColor('${card.id}','${tabId}')" title="Cor">🎨</button>
         <button class="kanban-col-btn" onclick="addTabTask('${tabId}','${card.id}')" title="Adicionar">＋</button>
         <button class="kanban-col-btn del" onclick="deleteCard('${tabId}','${card.id}')" title="Remover">✕</button>
       </div>`:''}
@@ -2862,11 +2871,15 @@ function renderTaskPanelByCats(allTasks, title, addCatId){
 
   function sortTasks(arr){
     return [...arr].sort((a,b)=>{
+      if(taskSortMode==='date'){
+        if(a.due&&b.due) return new Date(a.due)-new Date(b.due);
+        if(a.due) return -1; if(b.due) return 1; return 0;
+      }
+      if(taskSortMode==='recent') return String(b.id).localeCompare(String(a.id));
       const pa=a.priority||4,pb=b.priority||4;
       if(pa!==pb) return pa-pb;
       if(a.due&&b.due) return new Date(a.due)-new Date(b.due);
-      if(a.due) return -1; if(b.due) return 1;
-      return 0;
+      if(a.due) return -1; if(b.due) return 1; return 0;
     });
   }
 
@@ -2939,6 +2952,8 @@ const SIDEBAR_MAP={
 
 let currentSidebarKey='semana';
 let currentFilterCat=null;
+const collapsedCats=new Set();
+let taskSortMode="priority";
 
 function bindTaskDrag(list){
   list.querySelectorAll('.task-item[data-taskid]').forEach(el=>{
@@ -2971,6 +2986,105 @@ function bindTaskDrag(list){
       e.dataTransfer.setData('text/plain',id);
     });
     el.addEventListener('dragend',()=>{el.classList.remove('dragging-task');draggingTask=null;removeGhost();});
+  });
+}
+
+
+function setTaskSort(mode){
+  taskSortMode=mode;
+  document.querySelectorAll('.tp-sort-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sort-'+mode)?.classList.add('active');
+  if(currentFilterCat) filterTasksBy(currentFilterCat);
+  else renderTaskPanelForKey(currentSidebarKey);
+}
+
+function toggleCatGroup(cid){
+  if(collapsedCats.has(cid)) collapsedCats.delete(cid);
+  else collapsedCats.add(cid);
+  if(currentFilterCat) filterTasksBy(currentFilterCat);
+  else renderTaskPanelForKey(currentSidebarKey);
+}
+
+function editCardTitle(cardId, tabId, el){
+  const card=(CARD_DEFS_BY_TAB[tabId]||[]).find(c=>c.id===cardId);
+  if(!card) return;
+  const orig=card.title||'';
+  const inp=document.createElement('input');
+  inp.value=orig;
+  inp.style.cssText='font-size:13px;font-weight:600;border:none;outline:none;background:transparent;width:100%;font-family:inherit;color:var(--g700);';
+  el.replaceWith(inp);inp.focus();inp.select();
+  function save(){
+    const v=inp.value.trim()||orig;card.title=v;
+    inp.replaceWith(el);el.textContent=v;
+    if(tabId==='nexus') renderNexus();
+    else renderChecklist(tabId,'cl-wrap-'+tabId);
+    renderTaskPanelForKey(currentSidebarKey);saveState();
+  }
+  inp.onblur=save;
+  inp.onkeydown=e=>{if(e.key==='Enter')save();if(e.key==='Escape'){inp.value=orig;save();}};
+}
+
+function editCatName(catId, el){
+  const cat=CATEGORIES.find(c=>c.id===catId);
+  if(!cat) return;
+  const orig=cat.name||'';
+  const inp=document.createElement('input');
+  inp.value=orig;
+  inp.style.cssText='font-size:12px;border:none;outline:none;background:transparent;width:80px;font-family:inherit;color:var(--g500);';
+  el.replaceWith(inp);inp.focus();inp.select();
+  inp.onclick=e=>e.stopPropagation();
+  function save(){
+    const v=inp.value.trim()||orig;cat.name=v;
+    inp.replaceWith(el);el.textContent=v;
+    renderSidebarCats();saveState();
+  }
+  inp.onblur=save;
+  inp.onkeydown=e=>{if(e.key==='Enter')save();if(e.key==='Escape'){inp.value=orig;save();}};
+}
+
+function showColorPicker(colors, currentColor, onPick){
+  document.getElementById('color-picker-popup')?.remove();
+  const pop=document.createElement('div');
+  pop.id='color-picker-popup';
+  pop.style.cssText='position:fixed;z-index:9999;background:white;border:1px solid var(--g150);border-radius:10px;padding:10px;box-shadow:0 4px 20px rgba(0,0,0,.15);display:flex;flex-wrap:wrap;gap:6px;width:190px;';
+  colors.forEach(c=>{
+    const sw=document.createElement('div');
+    sw.style.cssText='width:24px;height:24px;border-radius:6px;background:'+c+';cursor:pointer;border:2px solid '+(c===currentColor?'#333':'transparent')+';transition:transform .1s;box-sizing:border-box;';
+    sw.onmouseenter=()=>sw.style.transform='scale(1.15)';
+    sw.onmouseleave=()=>sw.style.transform='';
+    sw.onclick=()=>{onPick(c);pop.remove();};
+    pop.appendChild(sw);
+  });
+  const rect=event.target.getBoundingClientRect();
+  pop.style.left=Math.min(rect.left,window.innerWidth-200)+'px';
+  pop.style.top=(rect.bottom+4)+'px';
+  document.body.appendChild(pop);
+  setTimeout(()=>document.addEventListener('click',()=>pop.remove(),{once:true}),10);
+}
+
+function pickCardColor(cardId, tabId){
+  const card=(CARD_DEFS_BY_TAB[tabId]||[]).find(c=>c.id===cardId);
+  if(!card) return;
+  const colors=['#e8e4f0','#d3a6bd','#b5c9e8','#fce5cd','#d9ead3','#fce8b2','#f5dcdc','#f0e0f0','#c5dcf5','#d9d2e9','#ead1dc','#e8d5c4','#ddeeff','#fff9e6','#ffe4e1','#e0ffe0','#4A90E2','#5a4a7a','#3a5a4a','#7A4010','#2A6A4A','#8A2020'];
+  showColorPicker(colors, card.iconBg, (c)=>{
+    card.iconBg=c;
+    const r=parseInt(c.slice(1,3),16),g=parseInt(c.slice(3,5),16),b=parseInt(c.slice(5,7),16);
+    card.color=(r*299+g*587+b*114)/1000>140?'#2a2a2a':'#ffffff';
+    if(tabId==='nexus') renderNexus();
+    else renderChecklist(tabId,'cl-wrap-'+tabId);
+    renderTaskPanelForKey(currentSidebarKey);saveState();
+  });
+}
+
+function pickCatColor(catId){
+  const cat=CATEGORIES.find(c=>c.id===catId);
+  if(!cat) return;
+  const colors=['#e8e4f0','#d3a6bd','#b5c9e8','#fce5cd','#d9ead3','#fce8b2','#f5dcdc','#f0e0f0','#c5dcf5','#d9d2e9','#ead1dc','#e8d5c4','#ddeeff','#fff9e6','#ffe4e1','#e0ffe0','#4A90E2','#5a4a7a','#3a5a4a','#7A4010','#2A6A4A','#8A2020'];
+  showColorPicker(colors, cat.bg, (c)=>{
+    cat.bg=c;
+    const r=parseInt(c.slice(1,3),16),g=parseInt(c.slice(3,5),16),b=parseInt(c.slice(5,7),16);
+    cat.color=(r*299+g*587+b*114)/1000>140?'#2a2a2a':'#ffffff';
+    renderSidebarCats();saveState();
   });
 }
 
@@ -4548,16 +4662,6 @@ function renderSidebarCats(){
   const wrap=document.getElementById('sb-dyn-cats');
   if(!wrap) return;
   wrap.innerHTML='';
-  // "todas" item at top to clear filter
-  {
-    const el=document.createElement('div');
-    el.className='sb-item'+(currentFilterCat===null?' active':'');
-    el.dataset.catId='__all__';
-    el.style.cssText='cursor:pointer;';
-    el.innerHTML=`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--g300);margin-right:7px;vertical-align:middle;flex-shrink:0;"></span>`+
-      `<span class="sb-item-lbl" style="color:var(--g500);font-size:12px;">semana</span>`;
-    wrap.appendChild(el);
-  }
   // Show only top-level CATEGORIES in sidebar (not subcategories/cards)
   const allCats=CATEGORIES;
   allCats.forEach(cat=>{
@@ -4566,10 +4670,20 @@ function renderSidebarCats(){
     el.dataset.catId=cat.id;
     el.style.cssText='cursor:pointer;';
     el.innerHTML=
-      `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${cat.bg};margin-right:7px;vertical-align:middle;flex-shrink:0;"></span>`+
+      `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${cat.bg};margin-right:7px;vertical-align:middle;flex-shrink:0;cursor:pointer;" onclick="event.stopPropagation();pickCatColor('${cat.id}')" title="Mudar cor"></span>`+
       `<span class="sb-item-lbl" style="color:var(--g500);font-size:12px;">${cat.name}</span>`;
     wrap.appendChild(el);
   });
+  // "semana/todas" at bottom
+  {
+    const el=document.createElement('div');
+    el.className='sb-item'+(currentFilterCat===null?' active':'');
+    el.dataset.catId='__all__';
+    el.style.cssText='cursor:pointer;margin-top:4px;border-top:1px solid var(--g100);padding-top:6px;';
+    el.innerHTML='<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--g300);margin-right:7px;vertical-align:middle;flex-shrink:0;"></span>'+
+      '<span class="sb-item-lbl" style="color:var(--g500);font-size:12px;">semana</span>';
+    wrap.appendChild(el);
+  }
   // Single delegated listener on wrap
   wrap.onclick=(e)=>{
     const item=e.target.closest('[data-cat-id]');
