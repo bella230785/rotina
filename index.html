@@ -2075,16 +2075,25 @@ function renderCal(){
       for(let s=0;s<18;s++) calState[d][s]={type:'work',label:'Trabalho',sub:'6h30–15h30',bg:'#F0F0F0',color:'#909090',fixed:true};
     }
   }
-  // Slots visíveis
-  let allSlots=Array.from({length:TOTAL_SLOTS},(_,i)=>i);
-  const visibleSlots=allSlots;
+  // Slots visíveis — respeitando horas colapsadas
+  const visibleSlots=[];
+  const collapsedGroups=[]; // {hour, siStart, siEnd} for rendering collapsed rows
+  for(let si=0;si<TOTAL_SLOTS;si++){
+    const hour=SLOT_START+Math.floor(si/2);
+    if(collapsedHours.has(hour)){
+      // Only add the group entry once (on the :00 slot)
+      if(si%2===0) collapsedGroups.push({hour, siStart:si, siEnd:si+1});
+    } else {
+      visibleSlots.push(si);
+    }
+  }
 
   // Header
   const hdr=document.getElementById('cal-hdr');hdr.innerHTML='<div class="cal-hcell"></div>';
   dates.forEach((d,i)=>{const isToday=d.toDateString()===now.toDateString();
     hdr.innerHTML+=`<div class="cal-hcell"><div class="day-name">${DAYS[(i+1)%7]}</div><div class="day-num${isToday?' today':''}">${d.getDate()}</div></div>`;});
 
-  // Time col
+  // Time col — with collapsed hour indicators
   const tc=document.getElementById('time-col');tc.innerHTML='';
   visibleSlots.forEach(si=>{
     const el=document.createElement('div');
@@ -2103,7 +2112,17 @@ function renderCal(){
     col.style.position='relative';
 
     // Criar linhas de fundo (half-rows) para hover e drop
+    // Show collapsed hour indicators in day columns
+    const dcRendered=new Set();
     visibleSlots.forEach((si,vi)=>{
+      const h=SLOT_START+Math.floor(si/2);
+      if(si%2===0 && si>0 && collapsedHours.has(h-1) && !dcRendered.has(h-1)){
+        dcRendered.add(h-1);
+        const cRow=document.createElement('div');
+        cRow.style.cssText='height:16px;background:var(--g50);border-bottom:1px solid var(--g100);cursor:pointer;';
+        cRow.onclick=()=>{collapsedHours.delete(h-1);saveState();renderCal();};
+        col.appendChild(cRow);
+      }
       const row=document.createElement('div');
       row.className='half-row '+(si%2===0?'is-hour':'is-half');
       row.dataset.day=di;row.dataset.slot=si;
@@ -2996,7 +3015,8 @@ const SIDEBAR_MAP={
 let currentSidebarKey='semana';
 let currentFilterCat=null;
 const collapsedCats=new Set();
-const hiddenTimeRanges=new Set(); // "di-siStart-siEnd" strings
+const hiddenTimeRanges=new Set();
+const collapsedHours=new Set(); // hours to collapse (6..22)
 let taskSortMode="priority";
 
 function bindTaskDrag(list){
@@ -5584,6 +5604,7 @@ function saveState(){
     // weekStore backup
     localStorage.setItem(LS+'weekStore', JSON.stringify(weekStore));
     localStorage.setItem(LS+'hiddenSlots', JSON.stringify([...hiddenTimeRanges]));
+    localStorage.setItem(LS+'collapsedHours', JSON.stringify([...collapsedHours]));
   } catch(e){ console.warn('Erro ao salvar:', e); }
 }
 
@@ -5649,6 +5670,8 @@ function loadState(){
     // weekStore
     const hs=localStorage.getItem(LS+'hiddenSlots');
     if(hs) JSON.parse(hs).forEach(k=>hiddenTimeRanges.add(k));
+    const ch=localStorage.getItem(LS+'collapsedHours');
+    if(ch) JSON.parse(ch).forEach(h=>collapsedHours.add(parseInt(h)));
     const ws=localStorage.getItem(LS+'weekStore');
     if(ws){
       const loaded=JSON.parse(ws);
@@ -5775,7 +5798,8 @@ function buildSnapshot(){
     clChecked,
     calState,
     weekStore,
-    hiddenTimeRanges: [...hiddenTimeRanges]
+    hiddenTimeRanges: [...hiddenTimeRanges],
+    collapsedHours: [...collapsedHours]
   });
 }
 
@@ -5826,6 +5850,7 @@ async function loadFromAppsScript(){
     if(snap.calState) for(let d=0;d<7;d++) calState[d]=snap.calState[d]||{};
     if(snap.weekStore) Object.keys(snap.weekStore).forEach(k=>{ weekStore[k]=snap.weekStore[k]; });
     if(snap.hiddenTimeRanges) snap.hiddenTimeRanges.forEach(k=>hiddenTimeRanges.add(k));
+    if(snap.collapsedHours) snap.collapsedHours.forEach(h=>collapsedHours.add(parseInt(h)));
     
     localStorage.setItem(LS+'syncTs', snap.ts||Date.now());
     showSyncStatus('ok');
