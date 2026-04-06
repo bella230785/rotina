@@ -1086,7 +1086,7 @@ iframe.embed{flex:1;border:none;width:100%;height:100%;}
   </div>
 
   <!-- DETAIL EXPAND OVERLAY: flex sibling of views, hidden until expanded -->
-  <div id="td-expand-overlay" style="display:none;flex:1;flex-direction:column;overflow:hidden;background:white;border-left:1px solid var(--g100);min-height:0;position:relative;z-index:502;"></div>
+  <div id="td-expand-overlay" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;flex-direction:column;overflow:hidden;background:white;border-left:1px solid var(--g100);z-index:502;"></div>
 
   <!-- VIEWS -->
   <div class="view active" id="view-cal">
@@ -4109,10 +4109,7 @@ function toggleDetailExpand(){
     const richContent=noteContent.includes('<')?noteContent:plainToRich(noteContent);
     if(overlay){
       overlay.innerHTML='';
-      overlay.style.cssText='display:flex;flex:1;flex-direction:column;overflow:hidden;background:white;min-height:0;position:relative;z-index:502;border-left:1px solid var(--g100);';
-      // Hide .main to give overlay full space
-      const _mainEl=document.querySelector('.main');
-      if(_mainEl) _mainEl.style.display='none';
+      overlay.style.display='flex';
       // Header row
       const hdr=document.createElement('div');
       hdr.style.cssText='padding:10px 28px 8px;border-bottom:1px solid var(--g100);flex-shrink:0;display:flex;align-items:center;gap:10px;';
@@ -4292,7 +4289,7 @@ function closeTaskDetail(){
   if(detailExpanded){
     const ov=document.getElementById('td-expand-overlay');
     if(ov){ov.style.display='none';ov.innerHTML='';}
-    const _mainEl=document.querySelector('.main');if(_mainEl) _mainEl.style.display='';
+
     detailExpanded=false;
     // Panel was hidden during expand; restore display before final cleanup
     if(panel) panel.style.display='';
