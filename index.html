@@ -1357,7 +1357,10 @@ function renderChecklist(tabId, wrapId){
   if(!window._activeChip) window._activeChip={};
   const activeCard=window._activeChip[tabId]||null;
   bar.innerHTML=defs.map(card=>
-    `<button class="kv-btn${activeCard===card.id?' active':''}" onclick="setChecklistChip('${tabId}','${wrapId}','${card.id}')">${card.title}</button>`
+    `<button class="kv-btn${activeCard===card.id?' active':''}"
+      onclick="setChecklistChip('${tabId}','${wrapId}','${card.id}')"
+      ondblclick="event.stopPropagation();renameChip('${tabId}','${wrapId}','${card.id}',this)"
+      title="Duplo clique para renomear">${card.title}</button>`
   ).join('')+
   `<div style="width:1px;height:16px;background:var(--g150);margin:0 4px"></div>`+
   `<div style="margin-left:auto"><button class="kv-btn" onclick="addTabCategory('${tabId}')" style="border-style:dashed">＋ categoria</button></div>`;
@@ -1370,6 +1373,26 @@ function renderChecklist(tabId, wrapId){
 
   if(mode==='cat') renderKanbanByCat(tabId, kanban);
   else renderKanbanByDay(tabId, kanban);
+}
+
+
+function renameChip(tabId, wrapId, cardId, btn){
+  const current=btn.textContent.trim();
+  const inp=document.createElement('input');
+  inp.value=current;
+  inp.style.cssText='font-size:11px;border:none;outline:none;background:none;font-family:inherit;width:'+(current.length+4)+'ch;max-width:120px;';
+  btn.innerHTML='';btn.appendChild(inp);
+  inp.focus();inp.select();
+  function save(){
+    const val=inp.value.trim()||current;
+    const defs=CARD_DEFS_BY_TAB[tabId]||[];
+    const card=defs.find(c=>c.id===cardId);
+    if(card) card.title=val;
+    saveState();
+    renderChecklist(tabId, wrapId);
+  }
+  inp.onblur=save;
+  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();inp.blur();}if(e.key==='Escape'){inp.value=current;inp.blur();}};
 }
 
 function setChecklistChip(tabId, wrapId, cardId){
@@ -1484,7 +1507,7 @@ function makeKanbanCardHTML(card, t, tabId, dayMode=false){
   const subDone=subs.filter(s=>s.done).length;
 
   return`<div class="kanban-card${isExp?' expanded':''}" data-eid="${eid}" data-cid="${cid}" data-tid="${t.id}" data-tabid="${tabId}">
-    <div class="kanban-card-top">
+    <div class="kanban-card-top" style="display:flex;align-items:center;gap:8px;padding:4px 6px;">
       <div class="kanban-card-cb${done?' done':''}" onclick="kanbanToggle('${cid}','${t.id}','${tabId}',event)"></div>
       <div class="kanban-card-body" ondblclick="kanbanOpenDetail('${cid}','${t.id}',event)" style="cursor:default">
         <textarea class="kanban-card-title${done?' done-txt':''}" rows="1"
@@ -4728,16 +4751,45 @@ function renderSidebarCats(){
   const wrap=document.getElementById('sb-dyn-cats');
   if(!wrap) return;
   wrap.innerHTML='';
-  // Show only top-level CATEGORIES in sidebar (not subcategories/cards)
-  const allCats=CATEGORIES;
-  allCats.forEach(cat=>{
+  let _dragCatId=null;
+  CATEGORIES.forEach(cat=>{
     const el=document.createElement('div');
     el.className='sb-item';
     el.dataset.catId=cat.id;
     el.style.cssText='cursor:pointer;';
+    el.setAttribute('draggable','true');
     el.innerHTML=
-      `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${cat.bg};margin-right:7px;vertical-align:middle;flex-shrink:0;cursor:pointer;" onclick="event.stopPropagation();pickCatColor('${cat.id}')" title="Mudar cor"></span>`+
+      `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${cat.bg};margin-right:7px;vertical-align:middle;flex-shrink:0;cursor:pointer;" onclick="event.stopPropagation();openCatColorPicker('${cat.id}',event)" title="Mudar cor"></span>`+
       `<span class="sb-item-lbl" style="color:var(--g500);font-size:12px;">${cat.name}</span>`;
+    // Cat reorder drag
+    el.addEventListener('dragstart',e=>{
+      if(draggingTask) return; // don't interfere with task drag
+      _dragCatId=cat.id;
+      e.dataTransfer.setData('catReorder', cat.id);
+      e.dataTransfer.effectAllowed='move';
+      setTimeout(()=>el.style.opacity='.4',0);
+    });
+    el.addEventListener('dragend',()=>{ el.style.opacity=''; _dragCatId=null; el.style.borderTop=''; });
+    el.addEventListener('dragover',e=>{
+      if(_dragCatId && _dragCatId!==cat.id){ e.preventDefault(); el.style.borderTop='2px solid var(--accent)'; }
+      else if(draggingTask){ e.preventDefault(); }
+    });
+    el.addEventListener('dragleave',()=>el.style.borderTop='');
+    el.addEventListener('drop',e=>{
+      el.style.borderTop='';
+      if(_dragCatId && _dragCatId!==cat.id){
+        // Reorder categories
+        const fromIdx=CATEGORIES.findIndex(c=>c.id===_dragCatId);
+        const toIdx=CATEGORIES.findIndex(c=>c.id===cat.id);
+        if(fromIdx>=0&&toIdx>=0){ const [m]=CATEGORIES.splice(fromIdx,1); CATEGORIES.splice(toIdx,0,m); }
+        saveState(); renderSidebarCats(); return;
+      }
+      if(draggingTask){
+        e.preventDefault();
+        reassignTaskCategory(draggingTask.id, cat.id);
+        draggingTask=null;
+      }
+    });
     wrap.appendChild(el);
   });
   // "semana/todas" at bottom
@@ -4762,20 +4814,7 @@ function renderSidebarCats(){
     if(catId==='__all__'){ currentFilterCat=null; renderTaskPanelForKey('semana'); }
     else { currentFilterCat=catId; filterTasksBy(catId); }
   };
-  wrap.ondragover=(e)=>{if(draggingTask){e.preventDefault();}};
-  wrap.ondrop=(e)=>{
-    e.preventDefault();
-    const item=e.target.closest('[data-cat-id]');
-    if(!item||!draggingTask) return;
-    reassignTaskCategory(draggingTask.id, item.dataset.catId);
-    item.style.background='';draggingTask=null;
-  };
-  // Highlight on dragover per item
-  wrap.addEventListener('dragover',e=>{
-    const item=e.target.closest('[data-cat-id]');
-    wrap.querySelectorAll('.sb-item').forEach(i=>i.style.background='');
-    if(item&&draggingTask) item.style.background='var(--accent-l)';
-  },{passive:true});
+
 }
 
 function reassignTaskCategory(taskId, newCatId){
