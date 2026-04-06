@@ -2002,15 +2002,38 @@ function renderCalDay(){
   dayWrap.style.cssText='display:grid;grid-template-columns:52px 1fr;flex:1;overflow-y:auto;';
   // Time col
   const timeCol=document.createElement('div');
-  timeCol.style.cssText='display:flex;flex-direction:column;';
-  for(let si=0;si<SLOTS;si++){
-    const h=SLOT_START+Math.floor(si/2),m=si%2===0?'00':'30';
+  timeCol.style.cssText='display:flex;flex-direction:column;flex-shrink:0;width:36px;';
+  const tcRendered=new Set();
+  visibleSlots.forEach(si=>{
+    const h=SLOT_START+Math.floor(si/2);
+    // Show collapsed indicator before this slot if previous hour was collapsed
+    if(si%2===0 && si>0 && collapsedHours.has(h-1) && !tcRendered.has(h-1)){
+      tcRendered.add(h-1);
+      const cEl=document.createElement('div');
+      cEl.style.cssText='height:14px;display:flex;align-items:center;cursor:pointer;color:var(--g400);font-size:9px;padding-left:4px;background:var(--g50);border-top:1px solid var(--g150);border-bottom:1px solid var(--g150);';
+      cEl.textContent='▸ '+(h-1)+'h';
+      cEl.title='Clique para expandir';
+      cEl.onclick=()=>{collapsedHours.delete(h-1);saveState();renderCal();};
+      timeCol.appendChild(cEl);
+    }
+    const m=si%2===0?'00':'30';
     const el=document.createElement('div');
     el.className='time-slot '+(si%2===0?'hour':'half');
-    el.textContent=m==='00'?`${h}h`:'';
     el.style.height=SLOT_H+'px';
+    if(m==='00'){
+      el.style.cssText=`height:${SLOT_H}px;cursor:pointer;display:flex;align-items:flex-start;padding-top:3px;font-size:10px;color:var(--g400);user-select:none;position:relative;`;
+      el.title='Clique para ocultar esta hora';
+      const hSpan=document.createElement('span');hSpan.textContent=h+'h';
+      const colBtn=document.createElement('span');
+      colBtn.textContent=' ⊟';
+      colBtn.style.cssText='font-size:8px;opacity:0;transition:opacity .15s;color:var(--g300);';
+      el.appendChild(hSpan);el.appendChild(colBtn);
+      el.onmouseenter=()=>colBtn.style.opacity='1';
+      el.onmouseleave=()=>colBtn.style.opacity='0';
+      el.onclick=()=>{collapsedHours.add(h);saveState();renderCal();};
+    }
     timeCol.appendChild(el);
-  }
+  });
   dayWrap.appendChild(timeCol);
   // Day col
   const cs=calState[dayIdx]||{};
