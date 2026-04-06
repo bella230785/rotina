@@ -2669,17 +2669,22 @@ function switchView(id,btn){
     return;
   }
 }
-function shiftWeek(dir){
+async function shiftWeek(dir){
   if(calViewMode!=='semana'){ calViewMode='semana'; document.querySelector('#view-semana-btn')?.click(); return; }
   saveCurrentWeek();
-  saveState();
+  // Cancel debounced sync and save immediately before navigating
+  clearTimeout(_syncTimeout);
+  if(typeof _origSaveState==='function') _origSaveState(); else saveState.__orig?.() ;
+  await syncToAppsScript();
   weekOffset+=dir;
   loadWeek(weekOffset);
   renderCal();
 }
-function goToday(){
+async function goToday(){
   saveCurrentWeek();
-  saveState();
+  clearTimeout(_syncTimeout);
+  if(typeof _origSaveState==='function') _origSaveState();
+  await syncToAppsScript();
   weekOffset=0;calViewMode='semana';
   document.querySelectorAll('.btn-group-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('view-semana-btn')?.classList.add('active');
