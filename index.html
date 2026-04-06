@@ -4109,12 +4109,10 @@ function toggleDetailExpand(){
     const richContent=noteContent.includes('<')?noteContent:plainToRich(noteContent);
     if(overlay){
       overlay.innerHTML='';
-      overlay.style.display='flex';
-      // Hide .main so overlay takes full width
+      overlay.style.cssText='display:flex;flex:1;flex-direction:column;overflow:hidden;background:white;min-height:0;position:relative;z-index:502;border-left:1px solid var(--g100);';
+      // Hide .main to give overlay full space
       const _mainEl=document.querySelector('.main');
       if(_mainEl) _mainEl.style.display='none';
-      overlay.style.borderLeft='none';
-      overlay.style.borderBottom='1px solid var(--g100)';
       // Header row
       const hdr=document.createElement('div');
       hdr.style.cssText='padding:10px 28px 8px;border-bottom:1px solid var(--g100);flex-shrink:0;display:flex;align-items:center;gap:10px;';
