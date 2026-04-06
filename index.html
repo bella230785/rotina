@@ -1357,12 +1357,9 @@ function renderChecklist(tabId, wrapId){
   if(!window._activeChip) window._activeChip={};
   const activeCard=window._activeChip[tabId]||null;
   bar.innerHTML=defs.map(card=>
-    `<span style="display:inline-flex;align-items:center;gap:0;">
-      <button class="kv-btn${activeCard===card.id?' active':''}"
-        onclick="setChecklistChip('${tabId}','${wrapId}','${card.id}')">${card.title}</button>
-      <button onclick="renameChip('${tabId}','${wrapId}','${card.id}',this.previousElementSibling)"
-        style="background:none;border:none;cursor:pointer;font-size:9px;color:var(--g300);padding:0 2px 0 0;line-height:1;" title="Renomear">✎</button>
-    </span>`
+    `<button class="kv-btn${activeCard===card.id?' active':''}"
+      onclick="setChecklistChip('${tabId}','${wrapId}','${card.id}',event,this)"
+      title="${activeCard===card.id?'Clique para renomear':'Clique para filtrar'}">${card.title}</button>`
   ).join('')+
   `<div style="width:1px;height:16px;background:var(--g150);margin:0 4px"></div>`+
   `<div style="margin-left:auto"><button class="kv-btn" onclick="addTabCategory('${tabId}')" style="border-style:dashed">＋ categoria</button></div>`;
@@ -1397,11 +1394,15 @@ function renameChip(tabId, wrapId, cardId, btn){
   inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();inp.blur();}if(e.key==='Escape'){inp.value=current;inp.blur();}};
 }
 
-function setChecklistChip(tabId, wrapId, cardId){
+function setChecklistChip(tabId, wrapId, cardId, e, btn){
   if(!window._activeChip) window._activeChip={};
-  window._activeChip[tabId]= window._activeChip[tabId]===cardId ? null : cardId;
+  if(window._activeChip[tabId]===cardId){
+    // Already active: open rename
+    if(btn) renameChip(tabId, wrapId, cardId, btn);
+    return;
+  }
+  window._activeChip[tabId]=cardId;
   renderChecklist(tabId, wrapId);
-  // Scroll to that card in kanban
   setTimeout(()=>{
     const el=document.getElementById('kl-'+cardId);
     if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
