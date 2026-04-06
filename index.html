@@ -4110,10 +4110,11 @@ function toggleDetailExpand(){
     if(overlay){
       overlay.innerHTML='';
       overlay.style.display='flex';
-      // Top separator line
-      const sepLine=document.createElement('div');
-      sepLine.style.cssText='height:1px;background:var(--g100);flex-shrink:0;';
-      overlay.appendChild(sepLine);
+      // Hide .main so overlay takes full width
+      const _mainEl=document.querySelector('.main');
+      if(_mainEl) _mainEl.style.display='none';
+      overlay.style.borderLeft='none';
+      overlay.style.borderBottom='1px solid var(--g100)';
       // Header row
       const hdr=document.createElement('div');
       hdr.style.cssText='padding:10px 28px 8px;border-bottom:1px solid var(--g100);flex-shrink:0;display:flex;align-items:center;gap:10px;';
@@ -4126,18 +4127,7 @@ function toggleDetailExpand(){
       catBadge.textContent=cat.name||'';
       const btns=document.createElement('div');
       btns.style.cssText='margin-left:auto;display:flex;gap:4px;';
-      const btnHideView=document.createElement('button');
-      btnHideView.style.cssText='background:none;border:none;font-size:11px;cursor:pointer;color:var(--g300);padding:2px 8px;border:1px solid var(--g150);border-radius:6px;';
-      btnHideView.textContent='ocultar aba';
-      btnHideView.title='Ocultar/mostrar a aba ao lado';
-      btnHideView.onclick=()=>{
-        const mainEl=document.querySelector('.main');
-        if(mainEl){
-          const hidden=mainEl.style.display==='none';
-          mainEl.style.display=hidden?'':'none';
-          btnHideView.textContent=hidden?'ocultar aba':'mostrar aba';
-        }
-      };
+
       const btnCollapse=document.createElement('button');
       btnCollapse.style.cssText='background:none;border:none;font-size:16px;cursor:pointer;color:var(--g400);padding:2px 6px;';
       btnCollapse.textContent='⤡';btnCollapse.onclick=toggleDetailExpand;
@@ -4158,8 +4148,11 @@ function toggleDetailExpand(){
       toolbar.innerHTML=`
         <button class="td-rich-btn" onclick="ovFmt('bold')" title="Negrito"><b>B</b></button>
         <button class="td-rich-btn" onclick="ovFmt('italic')" title="Itálico"><i>I</i></button>
+        <button class="td-rich-btn" onclick="ovFmt('strikeThrough')" title="Riscado" style="text-decoration:line-through;">S</button>
+        <button class="td-rich-btn" onclick="ovHighlight()" title="Destacar" style="background:#43b8cf4f;">M</button>
         <button class="td-rich-btn" onclick="ovFmt('superscript')" style="font-size:11px;">x²</button>
         <div class="td-rich-sep"></div>
+        <button class="td-rich-btn" onclick="ovQuote()" title="Citação" style="font-size:14px;font-style:italic;">"</button>
         <button class="td-rich-btn" onclick="ovCheckbox()">☑</button>
         <button class="td-rich-btn" onclick="ovHR()">─</button>
         <div class="td-rich-sep"></div>
@@ -4300,7 +4293,8 @@ function closeTaskDetail(){
   _tdDragBound=false;
   if(detailExpanded){
     const ov=document.getElementById('td-expand-overlay');
-    if(ov){ov.style.display='none';ov.innerHTML='';}    const _mainEl=document.querySelector('.main');if(_mainEl) _mainEl.style.display='';
+    if(ov){ov.style.display='none';ov.innerHTML='';}
+    const _mainEl=document.querySelector('.main');if(_mainEl) _mainEl.style.display='';
     detailExpanded=false;
     // Panel was hidden during expand; restore display before final cleanup
     if(panel) panel.style.display='';
@@ -6172,6 +6166,25 @@ function switchToCustomTab(id,btn){
   currentFilterCat=null;
   renderChecklist(id,'cl-wrap-'+id);
   renderTaskPanelForKey(id);
+}
+
+
+function ovHighlight(){
+  const sel=window.getSelection();
+  if(!sel||sel.isCollapsed) return;
+  const range=sel.getRangeAt(0);
+  const mark=document.createElement('mark');
+  mark.style.cssText='background:#43b8cf4f;border-radius:4px;padding:0 .1em;';
+  try{range.surroundContents(mark);}catch(e){
+    document.execCommand('insertHTML',false,'<mark style="background:#43b8cf4f;border-radius:4px;padding:0 .1em;">'+range.toString()+'</mark>');
+  }
+}
+
+function ovQuote(){
+  const sel=window.getSelection();
+  const text=sel&&!sel.isCollapsed?sel.toString():'';
+  const bq=`<blockquote style="background:#a5a0a026;border-left:none;margin:4px 0;padding:10px 14px 10px 18px;border-radius:8px;color:#312f2ff5;">${text||'Citação'}</blockquote><br>`;
+  document.execCommand('insertHTML',false,bq);
 }
 
 </script>
