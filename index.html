@@ -578,7 +578,7 @@ body{
 .kanban-card.expanded{cursor:default;}
 .kanban-card-top{
   display:flex;align-items:center;gap:8px;
-  padding:5px 4px;
+  padding:4px 4px;
 }
 .kanban-card-cb{
   width:15px;height:15px;border-radius:50%;
@@ -1023,15 +1023,13 @@ iframe.embed{flex:1;border:none;width:100%;height:100%;}
     </div>
     <div class="topbar-right">
       <span id="sync-status" style="font-size:13px;cursor:default;margin-right:4px;transition:color .3s;" title=""></span>
-      <div class="topbar-date" id="topbar-date"></div>
 
       <div class="btn-group">
         <button class="btn-group-item active" id="view-semana-btn" onclick="switchCalView('semana',this)">semana</button>
         <button class="btn-group-item" id="view-mes-btn" onclick="switchCalView('mes',this)">mês</button>
         <button class="btn-group-item" id="view-dia-btn" onclick="switchCalView('dia',this)">dia</button>
       </div>
-      <button class="btn-today" onclick="goToday()">Hoje</button>
-      <button class="btn-new" onclick="openAddTask()">＋ novo</button>
+      <button class="btn-new" onclick="openNewTabDialog()">＋ nova aba</button>
     </div>
   </div>
 
@@ -1350,13 +1348,19 @@ function renderChecklist(tabId, wrapId){
   if(!wrap) return;
   const mode=tabViewMode[tabId]||'cat';
   wrap.innerHTML='';
-  // Barra de toggle view
+  // Top bar with chips for each card + add button
   const bar=document.createElement('div');
   bar.className='kanban-view-bar';
-  bar.innerHTML=`
-    <div style="margin-left:auto;display:flex;gap:6px">
-      <button class="kv-btn" onclick="addTabCategory('${tabId}')" style="border-style:dashed">＋ categoria</button>
-    </div>`;
+  bar.style.cssText='padding:10px 20px 0;flex-shrink:0;border-bottom:1px solid var(--g100);padding-bottom:8px;margin-bottom:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap;';
+  const defs=CARD_DEFS_BY_TAB[tabId]||[];
+  // Active chip state
+  if(!window._activeChip) window._activeChip={};
+  const activeCard=window._activeChip[tabId]||null;
+  bar.innerHTML=defs.map(card=>
+    `<button class="kv-btn${activeCard===card.id?' active':''}" onclick="setChecklistChip('${tabId}','${wrapId}','${card.id}')">${card.title}</button>`
+  ).join('')+
+  `<div style="width:1px;height:16px;background:var(--g150);margin:0 4px"></div>`+
+  `<div style="margin-left:auto"><button class="kv-btn" onclick="addTabCategory('${tabId}')" style="border-style:dashed">＋ categoria</button></div>`;
   tabViewMode[tabId]='cat';
   wrap.appendChild(bar);
 
@@ -1366,6 +1370,17 @@ function renderChecklist(tabId, wrapId){
 
   if(mode==='cat') renderKanbanByCat(tabId, kanban);
   else renderKanbanByDay(tabId, kanban);
+}
+
+function setChecklistChip(tabId, wrapId, cardId){
+  if(!window._activeChip) window._activeChip={};
+  window._activeChip[tabId]= window._activeChip[tabId]===cardId ? null : cardId;
+  renderChecklist(tabId, wrapId);
+  // Scroll to that card in kanban
+  setTimeout(()=>{
+    const el=document.getElementById('kl-'+cardId);
+    if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  },100);
 }
 
 function setTabView(tabId, wrapId, mode){
@@ -4744,7 +4759,7 @@ function renderSidebarCats(){
     wrap.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
     item.classList.add('active');
     // Show all tasks if clicking already-active, else filter
-    if(catId==='__all__'||currentFilterCat===catId){ currentFilterCat=null; renderTaskPanelForKey('semana'); }
+    if(catId==='__all__'){ currentFilterCat=null; renderTaskPanelForKey('semana'); }
     else { currentFilterCat=catId; filterTasksBy(catId); }
   };
   wrap.ondragover=(e)=>{if(draggingTask){e.preventDefault();}};
@@ -4764,30 +4779,41 @@ function renderSidebarCats(){
 }
 
 function reassignTaskCategory(taskId, newCatId){
-  // Update in TASK_DATA
+  if(!taskId||!newCatId) return;
+  // Find and remove task from CARD_DEFS_BY_TAB
+  let foundTask=null;
+  Object.values(CARD_DEFS_BY_TAB).forEach(defs=>{
+    defs.forEach(card=>{
+      const idx=card.tasks.findIndex(t=>t.id===taskId);
+      if(idx>=0 && !foundTask){ foundTask={...card.tasks[idx]}; card.tasks.splice(idx,1); }
+    });
+  });
+  // Also check TASK_DATA
+  if(!foundTask){
+    ['semana','mes','nexus'].forEach(tab=>{
+      const idx=TASK_DATA[tab].findIndex(t=>t.id===taskId);
+      if(idx>=0 && !foundTask){
+        foundTask={id:taskId,l:TASK_DATA[tab][idx].label||'',n:TASK_DATA[tab][idx].note||'',
+          due:TASK_DATA[tab][idx].due||'',time:TASK_DATA[tab][idx].time||'',
+          duration:TASK_DATA[tab][idx].duration||''};
+      }
+    });
+  }
+  if(!foundTask){ console.warn('Task not found:', taskId); return; }
+  // Place into target card
+  let placed=false;
+  Object.values(CARD_DEFS_BY_TAB).forEach(defs=>{
+    const card=defs.find(c=>c.id===newCatId);
+    if(card&&!placed){ card.tasks.unshift({...foundTask}); placed=true; }
+  });
+  // Update TASK_DATA catId
   ['semana','mes','nexus'].forEach(tab=>{
     const t=TASK_DATA[tab].find(x=>x.id===taskId);
     if(t) t.catId=newCatId;
   });
-  // Update in CARD_DEFS_BY_TAB (move task between cards)
-  let foundTask=null, foundFromCard=null;
-  Object.values(CARD_DEFS_BY_TAB).forEach(defs=>{
-    defs.forEach(card=>{
-      const idx=card.tasks.findIndex(t=>t.id===taskId);
-      if(idx>=0){ foundTask={...card.tasks[idx]}; foundFromCard=card; card.tasks.splice(idx,1); }
-    });
-  });
-  if(foundTask){
-    // Find target card matching newCatId or first card of that tab
-    let placed=false;
-    Object.values(CARD_DEFS_BY_TAB).forEach(defs=>{
-      const card=defs.find(c=>c.id===newCatId);
-      if(card&&!placed){ card.tasks.unshift(foundTask); placed=true; }
-    });
-    if(!placed && foundFromCard) foundFromCard.tasks.unshift(foundTask);
-  }
+  if(currentFilterCat) filterTasksBy(currentFilterCat);
+  else renderTaskPanelForKey(currentSidebarKey);
   saveState();
-  renderTaskPanelForKey(currentSidebarKey);
 }
 
 // ── PICKER DINÂMICO ──
