@@ -5537,6 +5537,8 @@ function saveState(){
     localStorage.setItem(LS+'calState', JSON.stringify(calSave));
     // Overlays
     localStorage.setItem(LS+'overlays', JSON.stringify(overlays));
+    // weekStore backup
+    localStorage.setItem(LS+'weekStore', JSON.stringify(weekStore));
   } catch(e){ console.warn('Erro ao salvar:', e); }
 }
 
@@ -5598,6 +5600,12 @@ function loadState(){
     if(ov){
       const loaded=JSON.parse(ov);
       Object.keys(loaded).forEach(k=>{ overlays[k]=loaded[k]; });
+    }
+    // weekStore
+    const ws=localStorage.getItem(LS+'weekStore');
+    if(ws){
+      const loaded=JSON.parse(ws);
+      Object.keys(loaded).forEach(wk=>{ weekStore[wk]=loaded[wk]; });
     }
   } catch(e){ console.warn('Erro ao carregar:', e); }
 }
@@ -5746,7 +5754,7 @@ async function syncToAppsScript(){
 async function loadFromAppsScript(){
   showSyncStatus('syncing');
   try{
-    const resp = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?select=value&limit=1`, {
+    const resp = await fetch(`${SB_URL}/rest/v1/${SB_TABLE}?select=value&order=id.desc&limit=1`, {
       headers: sbHeaders()
     });
     if(!resp.ok) throw new Error('HTTP '+resp.status);
