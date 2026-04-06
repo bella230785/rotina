@@ -986,10 +986,10 @@ iframe.embed{flex:1;border:none;width:100%;height:100%;}
   <div class="task-panel-resize-r" id="tp-resize-r"></div>
   <div class="task-panel-hdr" id="task-panel-hdr">
     <div class="task-panel-cat-title" id="tp-cat-title">tasks</div>
-      <div id="tp-sort-bar" style="display:flex;gap:4px;padding:4px 12px 6px;border-bottom:1px solid var(--g100);">
-        <button onclick="setTaskSort('priority')" id="sort-priority" class="tp-sort-btn active">↑ prior.</button>
-        <button onclick="setTaskSort('date')" id="sort-date" class="tp-sort-btn">📅 data</button>
-        <button onclick="setTaskSort('recent')" id="sort-recent" class="tp-sort-btn">⟳ recent</button>
+      <div id="tp-sort-bar" style="display:flex;gap:4px;padding:4px 12px 6px;align-items:center;">
+        <span style="font-size:10px;color:var(--g300);margin-right:2px;">ver:</span>
+        <button onclick="setTaskSort('default')" id="sort-btn-default" class="tp-sort-btn active">padrão</button>
+        <button onclick="setTaskSort('recent')" id="sort-btn-recent" class="tp-sort-btn">recente</button>
       </div>
     <div class="tp-add-wrap" onclick="document.getElementById('tp-add-input').focus()">
       <input class="tp-add-input" id="tp-add-input"
@@ -2002,38 +2002,15 @@ function renderCalDay(){
   dayWrap.style.cssText='display:grid;grid-template-columns:52px 1fr;flex:1;overflow-y:auto;';
   // Time col
   const timeCol=document.createElement('div');
-  timeCol.style.cssText='display:flex;flex-direction:column;flex-shrink:0;width:36px;';
-  const tcRendered=new Set();
-  visibleSlots.forEach(si=>{
-    const h=SLOT_START+Math.floor(si/2);
-    // Show collapsed indicator before this slot if previous hour was collapsed
-    if(si%2===0 && si>0 && collapsedHours.has(h-1) && !tcRendered.has(h-1)){
-      tcRendered.add(h-1);
-      const cEl=document.createElement('div');
-      cEl.style.cssText='height:14px;display:flex;align-items:center;cursor:pointer;color:var(--g400);font-size:9px;padding-left:4px;background:var(--g50);border-top:1px solid var(--g150);border-bottom:1px solid var(--g150);';
-      cEl.textContent='▸ '+(h-1)+'h';
-      cEl.title='Clique para expandir';
-      cEl.onclick=()=>{collapsedHours.delete(h-1);saveState();renderCal();};
-      timeCol.appendChild(cEl);
-    }
-    const m=si%2===0?'00':'30';
+  timeCol.style.cssText='display:flex;flex-direction:column;';
+  for(let si=0;si<SLOTS;si++){
+    const h=SLOT_START+Math.floor(si/2),m=si%2===0?'00':'30';
     const el=document.createElement('div');
     el.className='time-slot '+(si%2===0?'hour':'half');
+    el.textContent=m==='00'?`${h}h`:'';
     el.style.height=SLOT_H+'px';
-    if(m==='00'){
-      el.style.cssText=`height:${SLOT_H}px;cursor:pointer;display:flex;align-items:flex-start;padding-top:3px;font-size:10px;color:var(--g400);user-select:none;position:relative;`;
-      el.title='Clique para ocultar esta hora';
-      const hSpan=document.createElement('span');hSpan.textContent=h+'h';
-      const colBtn=document.createElement('span');
-      colBtn.textContent=' ⊟';
-      colBtn.style.cssText='font-size:8px;opacity:0;transition:opacity .15s;color:var(--g300);';
-      el.appendChild(hSpan);el.appendChild(colBtn);
-      el.onmouseenter=()=>colBtn.style.opacity='1';
-      el.onmouseleave=()=>colBtn.style.opacity='0';
-      el.onclick=()=>{collapsedHours.add(h);saveState();renderCal();};
-    }
     timeCol.appendChild(el);
-  });
+  }
   dayWrap.appendChild(timeCol);
   // Day col
   const cs=calState[dayIdx]||{};
@@ -2098,25 +2075,16 @@ function renderCal(){
       for(let s=0;s<18;s++) calState[d][s]={type:'work',label:'Trabalho',sub:'6h30–15h30',bg:'#F0F0F0',color:'#909090',fixed:true};
     }
   }
-  // Slots visíveis — respeitando horas colapsadas
-  const visibleSlots=[];
-  const collapsedGroups=[]; // {hour, siStart, siEnd} for rendering collapsed rows
-  for(let si=0;si<TOTAL_SLOTS;si++){
-    const hour=SLOT_START+Math.floor(si/2);
-    if(collapsedHours.has(hour)){
-      // Only add the group entry once (on the :00 slot)
-      if(si%2===0) collapsedGroups.push({hour, siStart:si, siEnd:si+1});
-    } else {
-      visibleSlots.push(si);
-    }
-  }
+  // Slots visíveis
+  let allSlots=Array.from({length:TOTAL_SLOTS},(_,i)=>i);
+  const visibleSlots=allSlots;
 
   // Header
   const hdr=document.getElementById('cal-hdr');hdr.innerHTML='<div class="cal-hcell"></div>';
   dates.forEach((d,i)=>{const isToday=d.toDateString()===now.toDateString();
     hdr.innerHTML+=`<div class="cal-hcell"><div class="day-name">${DAYS[(i+1)%7]}</div><div class="day-num${isToday?' today':''}">${d.getDate()}</div></div>`;});
 
-  // Time col — with collapsed hour indicators
+  // Time col
   const tc=document.getElementById('time-col');tc.innerHTML='';
   visibleSlots.forEach(si=>{
     const el=document.createElement('div');
@@ -2135,17 +2103,7 @@ function renderCal(){
     col.style.position='relative';
 
     // Criar linhas de fundo (half-rows) para hover e drop
-    // Show collapsed hour indicators in day columns
-    const dcRendered=new Set();
     visibleSlots.forEach((si,vi)=>{
-      const h=SLOT_START+Math.floor(si/2);
-      if(si%2===0 && si>0 && collapsedHours.has(h-1) && !dcRendered.has(h-1)){
-        dcRendered.add(h-1);
-        const cRow=document.createElement('div');
-        cRow.style.cssText='height:16px;background:var(--g50);border-bottom:1px solid var(--g100);cursor:pointer;';
-        cRow.onclick=()=>{collapsedHours.delete(h-1);saveState();renderCal();};
-        col.appendChild(cRow);
-      }
       const row=document.createElement('div');
       row.className='half-row '+(si%2===0?'is-hour':'is-half');
       row.dataset.day=di;row.dataset.slot=si;
@@ -2998,14 +2956,21 @@ function renderTaskPanelByCats(allTasks, title, addCatId){
     const done=doneByCat[cid]||[];
     if(!pending.length&&!sched.length&&!done.length) return;
 
+    const _collapsed=collapsedCats.has(cid);
     html+=`<div class="tp-cat-group">
-      <div class="tp-cat-group-hdr" onclick="filterTasksBy('${cid}')" style="cursor:pointer;" title="Filtrar por categoria">
-        <span class="tp-cat-group-dot" style="background:${cat.bg}"></span>
-        <span class="tp-cat-group-name" style="text-transform:lowercase">${cat.name}</span>
-        <span class="tp-cat-group-count">${pending.length+sched.length}</span>
+      <div class="tp-cat-group-hdr" style="cursor:pointer;"
+        ondragover="event.preventDefault();this.style.background='var(--accent-l)'"
+        ondragleave="this.style.background=''"
+        ondrop="this.style.background='';handleTaskPanelDrop(event,'${cid}')">
+        <span onclick="toggleCatGroup('${cid}',event)" style="font-size:9px;color:var(--g300);margin-right:3px;display:inline-block;width:10px;flex-shrink:0;">${_collapsed?'›':'∨'}</span>
+        <span class="tp-cat-group-dot" style="background:${cat.bg}" onclick="filterTasksBy('${cid}')"></span>
+        <span class="tp-cat-group-name" style="text-transform:lowercase;flex:1;" onclick="filterTasksBy('${cid}')">${cat.name}</span>
+        <span class="tp-cat-group-count" onclick="filterTasksBy('${cid}')">${pending.length+sched.length}</span>
       </div>
-      ${pending.map(t=>taskItemHTML(t)).join('')}
-      ${sched.map(t=>taskItemHTML(t,false,true)).join('')}
+      <div id="tcg-${cid}" style="display:${_collapsed?'none':'block'}">
+        ${pending.map(t=>taskItemHTML(t)).join('')}
+        ${sched.map(t=>taskItemHTML(t,false,true)).join('')}
+      </div>
     </div>`;
     if(done.length){
       html+=`<div class="tp-cat-done-toggle" onclick="toggleCatDone('${cid}',this)">
@@ -3038,8 +3003,7 @@ const SIDEBAR_MAP={
 let currentSidebarKey='semana';
 let currentFilterCat=null;
 const collapsedCats=new Set();
-const hiddenTimeRanges=new Set();
-const collapsedHours=new Set(); // hours to collapse (6..22)
+const hiddenTimeRanges=new Set(); // "di-siStart-siEnd" strings
 let taskSortMode="priority";
 
 function bindTaskDrag(list){
@@ -5627,7 +5591,6 @@ function saveState(){
     // weekStore backup
     localStorage.setItem(LS+'weekStore', JSON.stringify(weekStore));
     localStorage.setItem(LS+'hiddenSlots', JSON.stringify([...hiddenTimeRanges]));
-    localStorage.setItem(LS+'collapsedHours', JSON.stringify([...collapsedHours]));
   } catch(e){ console.warn('Erro ao salvar:', e); }
 }
 
@@ -5693,8 +5656,6 @@ function loadState(){
     // weekStore
     const hs=localStorage.getItem(LS+'hiddenSlots');
     if(hs) JSON.parse(hs).forEach(k=>hiddenTimeRanges.add(k));
-    const ch=localStorage.getItem(LS+'collapsedHours');
-    if(ch) JSON.parse(ch).forEach(h=>collapsedHours.add(parseInt(h)));
     const ws=localStorage.getItem(LS+'weekStore');
     if(ws){
       const loaded=JSON.parse(ws);
@@ -5821,8 +5782,7 @@ function buildSnapshot(){
     clChecked,
     calState,
     weekStore,
-    hiddenTimeRanges: [...hiddenTimeRanges],
-    collapsedHours: [...collapsedHours]
+    hiddenTimeRanges: [...hiddenTimeRanges]
   });
 }
 
@@ -5873,7 +5833,6 @@ async function loadFromAppsScript(){
     if(snap.calState) for(let d=0;d<7;d++) calState[d]=snap.calState[d]||{};
     if(snap.weekStore) Object.keys(snap.weekStore).forEach(k=>{ weekStore[k]=snap.weekStore[k]; });
     if(snap.hiddenTimeRanges) snap.hiddenTimeRanges.forEach(k=>hiddenTimeRanges.add(k));
-    if(snap.collapsedHours) snap.collapsedHours.forEach(h=>collapsedHours.add(parseInt(h)));
     
     localStorage.setItem(LS+'syncTs', snap.ts||Date.now());
     showSyncStatus('ok');
