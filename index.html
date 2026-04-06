@@ -1010,7 +1010,7 @@ iframe.embed{flex:1;border:none;width:100%;height:100%;}
 
   <!-- TOPBAR -->
   <div class="topbar">
-    <div class="topbar-left">
+    <div class="topbar-left topbar-tabs">
       <button class="tab active" id="tab-cal" onclick="switchView('cal',this)">semana</button>
       <button class="tab" id="tab-nexus" onclick="switchView('nexus',this)">nexus.doc</button>
       <button class="tab" id="tab-study" onclick="switchView('study',this)">study</button>
@@ -1393,8 +1393,28 @@ function renameChip(tabId, wrapId, cardId, btn){
 function setChecklistChip(tabId, wrapId, cardId, e, btn){
   if(!window._activeChip) window._activeChip={};
   if(window._activeChip[tabId]===cardId){
-    // Already active: open rename
-    if(btn) renameChip(tabId, wrapId, cardId, btn);
+    // Already active: rename inline directly in the button
+    if(btn){
+      const cur=btn.textContent.trim();
+      btn.contentEditable='true';
+      btn.style.outline='1px solid var(--accent)';
+      btn.focus();
+      // Select all text
+      const range=document.createRange();range.selectNodeContents(btn);
+      const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
+      function saveRename(){
+        btn.contentEditable='false';
+        btn.style.outline='';
+        const val=btn.textContent.trim()||cur;
+        const card=(CARD_DEFS_BY_TAB[tabId]||[]).find(c=>c.id===cardId);
+        if(card&&val!==cur){ card.title=val; saveState(); renderChecklist(tabId,wrapId); }
+      }
+      btn.onblur=saveRename;
+      btn.onkeydown=e=>{
+        if(e.key==='Enter'){e.preventDefault();btn.blur();}
+        if(e.key==='Escape'){btn.textContent=cur;btn.blur();}
+      };
+    }
     return;
   }
   window._activeChip[tabId]=cardId;
@@ -2999,12 +3019,14 @@ function renderTaskPanelByCats(allTasks, title, addCatId){
         ondragover="event.preventDefault();this.style.background='var(--accent-l)'"
         ondragleave="this.style.background=''"
         ondrop="this.style.background='';handleTaskPanelDrop(event,'${cid}')">
-        <span class="tp-cat-group-dot" style="background:${cat.bg}" onclick="filterTasksBy('${cid}')"></span>
-        <span class="tp-cat-group-name" style="text-transform:lowercase;flex:1;" onclick="filterTasksBy('${cid}')">${cat.name}</span>
-        <span class="tp-cat-group-count" onclick="filterTasksBy('${cid}')">${pending.length+sched.length}</span>
+        <span class="tp-cat-group-dot" style="background:${cat.bg}"></span>
+        <span class="tp-cat-group-name" style="text-transform:lowercase;flex:1;" onclick="toggleCatGroup('${cid}',event)">${cat.name}</span>
+        <span class="tp-cat-group-count" onclick="toggleCatGroup('${cid}',event)">${pending.length+sched.length}</span>
       </div>
+      <div id="tcg-${cid}" style="display:${_collapsed?'none':'block'}">
       ${pending.map(t=>taskItemHTML(t)).join('')}
       ${sched.map(t=>taskItemHTML(t,false,true)).join('')}
+      </div>
     </div>`;
     if(done.length){
       html+=`<div class="tp-cat-done-toggle" onclick="toggleCatDone('${cid}',this)">
