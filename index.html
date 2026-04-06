@@ -5654,11 +5654,7 @@ async function loadFromAppsScript(){
     }
     
     const snap = JSON.parse(rows[0].value);
-    const localTs = parseInt(localStorage.getItem(LS+'syncTs')||'0');
-    if(snap.ts && snap.ts <= localTs){
-      showSyncStatus('idle');
-      return;
-    }
+    // Always apply cloud snapshot (it is the source of truth)
     
     // Apply snapshot
     if(snap.TASK_DATA) Object.assign(TASK_DATA, snap.TASK_DATA);
