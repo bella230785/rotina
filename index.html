@@ -921,6 +921,20 @@ iframe.embed{flex:1;border:none;width:100%;height:100%;}
 .cal-ctx-color-dot{width:18px;height:18px;border-radius:50%;cursor:pointer;transition:transform .1s;}
 .cal-ctx-color-dot:hover{transform:scale(1.25);}
 
+
+.cal-ctx-menu{
+  position:fixed;z-index:9999;
+  background:white;border:1px solid var(--g150);border-radius:10px;
+  padding:6px 0;box-shadow:0 4px 20px rgba(0,0,0,.15);
+  min-width:160px;font-size:12px;
+}
+.cal-ctx-item{
+  padding:7px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;
+  color:var(--g600);transition:background .1s;
+}
+.cal-ctx-item:hover{background:var(--g50);}
+.cal-ctx-colors{display:flex;flex-wrap:wrap;gap:5px;padding:6px 12px;}
+
 </style>
 </head>
 <body>
@@ -2011,6 +2025,7 @@ function renderCalDay(){
     if(!bd){
       const ab=document.createElement('button');ab.className='add-btn';ab.textContent='+';
       ab.onclick=()=>openPicker(dayIdx,si,row);row.appendChild(ab);
+      row.addEventListener('contextmenu',e=>showEmptySlotContextMenu(e,di,si));
     } else { row.classList.add('has-block'); }
     if(!bd||!bd.fixed){
       row.addEventListener('dragover',e=>{if(draggingTask||dragSrc){e.preventDefault();row.classList.add('drop-target');}});
@@ -5835,6 +5850,113 @@ window.saveState = function(){
   clearTimeout(_syncTimeout);
   _syncTimeout = setTimeout(syncToSheetDB, 2000);
 };
+
+
+// ── CALENDAR CONTEXT MENU ──
+function showCalContextMenu(e, di, si, bd){
+  e.preventDefault();
+  e.stopPropagation();
+  document.getElementById('cal-ctx-menu')?.remove();
+
+  const menu=document.createElement('div');
+  menu.id='cal-ctx-menu';
+  menu.className='cal-ctx-menu';
+  menu.style.left=Math.min(e.clientX,window.innerWidth-180)+'px';
+  menu.style.top=Math.min(e.clientY,window.innerHeight-220)+'px';
+
+  const colorLabel=document.createElement('div');
+  colorLabel.style.cssText='font-size:10px;color:var(--g400);padding:4px 14px 2px;';
+  colorLabel.textContent='cor do bloco';
+  menu.appendChild(colorLabel);
+
+  const colorRow=document.createElement('div');
+  colorRow.className='cal-ctx-colors';
+  const BLOCK_COLORS=[
+    ['#e8e4f0','#5a4a7a'],['#d3a6bd','#7a3060'],['#b5c9e8','#1A3A6A'],
+    ['#fce5cd','#7A4010'],['#d9ead3','#2A6A4A'],['#fce8b2','#7A5500'],
+    ['#f5dcdc','#8A2020'],['#c5dcf5','#1A3A7A'],['#d9d2e9','#5A3A80'],
+    ['#e8e8e8','#555555'],['#fff9c4','#6A5A00'],['#e0f7fa','#006064'],
+    ['#ffffff','#333333'],['#222222','#ffffff'],
+  ];
+  BLOCK_COLORS.forEach(([bg,color])=>{
+    const dot=document.createElement('div');
+    dot.className='cal-ctx-color-dot';
+    dot.style.cssText=`width:18px;height:18px;border-radius:50%;background:${bg};border:2px solid ${color}30;cursor:pointer;transition:transform .1s;`;
+    dot.onmouseenter=()=>dot.style.transform='scale(1.25)';
+    dot.onmouseleave=()=>dot.style.transform='';
+    dot.onclick=e=>{
+      e.stopPropagation();
+      const len=getBlockLen(di,si);
+      for(let k=0;k<len;k++) if(calState[di][si+k]){calState[di][si+k].bg=bg;calState[di][si+k].color=color;}
+      renderCal();saveState();menu.remove();
+    };
+    colorRow.appendChild(dot);
+  });
+  const inp=document.createElement('input');
+  inp.type='color';inp.value=bd?.bg||'#ffffff';
+  inp.style.cssText='width:18px;height:18px;border-radius:50%;border:none;cursor:pointer;padding:0;';
+  inp.title='Cor personalizada';
+  inp.oninput=()=>{
+    const len=getBlockLen(di,si);
+    for(let k=0;k<len;k++) if(calState[di][si+k]) calState[di][si+k].bg=inp.value;
+    renderCal();saveState();
+  };
+  colorRow.appendChild(inp);
+  menu.appendChild(colorRow);
+
+  const sep=document.createElement('div');
+  sep.style.cssText='height:1px;background:var(--g100);margin:4px 0;';
+  menu.appendChild(sep);
+
+  const hideItem=document.createElement('div');
+  hideItem.className='cal-ctx-item';
+  hideItem.innerHTML='<span>🙈</span><span>Ocultar este horário</span>';
+  hideItem.onclick=()=>{
+    const len=getBlockLen(di,si)||1;
+    const key=di+'-'+si+'-'+(si+len-1);
+    hiddenTimeRanges.add(key);
+    saveState();renderCal();menu.remove();
+  };
+  menu.appendChild(hideItem);
+
+  document.body.appendChild(menu);
+  setTimeout(()=>document.addEventListener('click',()=>menu.remove(),{once:true}),10);
+}
+
+function showEmptySlotContextMenu(e, di, si){
+  e.preventDefault();
+  e.stopPropagation();
+  document.getElementById('cal-ctx-menu')?.remove();
+
+  const menu=document.createElement('div');
+  menu.id='cal-ctx-menu';
+  menu.className='cal-ctx-menu';
+  menu.style.left=Math.min(e.clientX,window.innerWidth-180)+'px';
+  menu.style.top=Math.min(e.clientY,window.innerHeight-150)+'px';
+
+  const hideItem=document.createElement('div');
+  hideItem.className='cal-ctx-item';
+  hideItem.innerHTML='<span>🙈</span><span>Ocultar este slot</span>';
+  hideItem.onclick=()=>{
+    hiddenTimeRanges.add(di+'-'+si+'-'+si);
+    saveState();renderCal();menu.remove();
+  };
+  menu.appendChild(hideItem);
+
+  if(hiddenTimeRanges.size>0){
+    const sep=document.createElement('div');
+    sep.style.cssText='height:1px;background:var(--g100);margin:4px 0;';
+    menu.appendChild(sep);
+    const showItem=document.createElement('div');
+    showItem.className='cal-ctx-item';
+    showItem.innerHTML='<span>👁</span><span>Mostrar todos os slots</span>';
+    showItem.onclick=()=>{hiddenTimeRanges.clear();saveState();renderCal();menu.remove();};
+    menu.appendChild(showItem);
+  }
+
+  document.body.appendChild(menu);
+  setTimeout(()=>document.addEventListener('click',()=>menu.remove(),{once:true}),10);
+}
 
 </script>
 <!-- TASK DETAIL PANEL -->
