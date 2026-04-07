@@ -400,7 +400,7 @@ body{
 .nav-arrow:hover{background:var(--g50);}
 .today-btn{font-size:11px;font-weight:500;color:var(--g600);padding:4px 10px;border:1px solid var(--g150);border-radius:7px;background:white;cursor:pointer;font-family:inherit;}
 .today-btn:hover{background:var(--g50);}
-.date-range{font-size:11px;font-weight:500;color:var(--g600);}
+.date-range{font-size:10px;font-weight:400;color:var(--g400);letter-spacing:0.3px;}
 .subbar-right{margin-left:auto;display:flex;align-items:center;gap:7px;}
 .hint-pill{font-size:10px;color:var(--g300);}
 
@@ -578,7 +578,10 @@ body{
   background:white;
   cursor:pointer;
   position:relative;
-  border-bottom:none;
+}
+.kanban-card::after{
+  content:'';position:absolute;bottom:0;left:14px;right:14px;
+  height:1px;background:var(--g100);
 }
 .kanban-card:hover{background:var(--g50);}
 .kanban-card.expanded{cursor:default;}
@@ -903,7 +906,7 @@ iframe.embed{flex:1;border:none;width:100%;height:100%;}
 .td-rich-sep{width:1px;height:18px;background:var(--g150);margin:0 3px;flex-shrink:0;}
 .td-rich-editor{
   flex:1;overflow-y:auto;padding:14px 22px;outline:none;
-  font-family:inherit;font-size:13px;line-height:1.7;color:var(--g800);
+  font-family:inherit;font-size:var(--fs);line-height:1.8;color:#1c1c1c;letter-spacing:0.2px;
   min-height:0;
 }
 .td-rich-editor:empty::before{content:attr(data-placeholder);color:var(--g300);pointer-events:none;}
@@ -946,10 +949,12 @@ iframe.embed{flex:1;border:none;width:100%;height:100%;}
 :root {
   --ff: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
   --fs: 13px;          /* ← ALTERE AQUI para mudar a fonte global */
+  --lh: 1.6;
+  --ls: 0.2px;
   --note-font: var(--ff);
-  --note-fs: calc(var(--fs) + 1px);
-  --note-lh: 1.6;
-  --note-ls: 0.15px;
+  --note-fs: var(--fs);
+  --note-lh: var(--lh);
+  --note-ls: var(--ls);
   --quote-text: #312f2ff5;
 }
 /* Nota expandida */
@@ -1005,24 +1010,49 @@ body, .app-card, button, input, textarea, select {
   -webkit-font-smoothing: antialiased;
 }
 /* Base: 13px para elementos de UI, 14px para conteúdo */
-/* font sizes now via --fs variable */
 
 
-/* ── FONTE GLOBAL ── */
-html, body, .app-card, button, input, textarea, select, [class] {
+
+/* ── FONTE GLOBAL ÚNICA ── */
+*, *::before, *::after {
   font-family: var(--ff) !important;
+  letter-spacing: var(--ls) !important;
   -webkit-font-smoothing: antialiased;
+  box-sizing: border-box;
 }
-/* Tamanhos relativos ao --fs */
-body { font-size: var(--fs); }
-.sb-item, .tab, .kv-btn, .kanban-col-title,
-.kanban-card-title, .tp-cat-group-name,
-.task-panel-cat-title, .tf, .tp-sort-btn,
-.task-action-btn, .tp-add-input { font-size: var(--fs) !important; }
-.task-item { font-size: calc(var(--fs) + 0.5px) !important; color: #2c2c2c !important; }
-.block-title { font-size: calc(var(--fs) - 1px) !important; }
-#ov-editor, .td-note-editor { font-size: calc(var(--fs) + 1px) !important; }
-.tp-cat-group-name { font-size: calc(var(--fs) - 0.5px) !important; }
+html, body { font-size: var(--fs); line-height: var(--lh); }
+/* Todos os elementos herdam o mesmo tamanho */
+.sb-item, .tab, .kv-btn, .kanban-col-title, .kanban-card-title,
+.tp-cat-group-name, .task-panel-cat-title, .tf, .tp-sort-btn,
+.task-action-btn, .tp-add-input, .td-rich-btn, .task-item,
+button, input, select, textarea { font-size: var(--fs) !important; }
+/* Editor de notas: mesmo tamanho, melhor linha */
+.td-rich-editor, #ov-editor { 
+  font-size: var(--fs) !important; 
+  line-height: 1.75 !important;
+}
+/* Texto das tarefas levemente maior e escuro */
+.task-item { color: #2c2c2c !important; }
+
+
+.td-rich-editor p, #ov-editor p { margin: 0 0 0.85em 0; }
+.td-rich-editor h1, .td-rich-editor h2, .td-rich-editor h3,
+#ov-editor h1, #ov-editor h2, #ov-editor h3 {
+  font-size: calc(var(--fs) + 2px);
+  font-weight: 700;
+  color: #1c1c1c;
+  margin: 0.8em 0 0.4em 0;
+  letter-spacing: -0.01em;
+}
+.td-rich-editor blockquote, #ov-editor blockquote {
+  background: #f5f5f5;
+  border-left: 3px solid var(--g200);
+  margin: 0.6em 0;
+  padding: 8px 14px;
+  border-radius: 0 6px 6px 0;
+  color: #555;
+  font-style: italic;
+}
 
 </style>
 </head>
@@ -1584,7 +1614,6 @@ function makeKanbanCol(tabId, card, dayMode=false){
   const isHidden=hiddenKanbanCols.has(card.id);
   col.innerHTML=`
     <div class="kanban-col-hdr" onclick="toggleKanbanColBody('${card.id}')" style="cursor:pointer;">
-      <span id="kchev-${card.id}" style="font-size:10px;color:var(--g300);width:12px;flex-shrink:0;">${isHidden?'›':'∨'}</span>
       <div class="kanban-col-dot" style="background:${card.iconBg==='var(--g50)'?'var(--g300)':card.iconBg}"></div>
       <div class="kanban-col-title" ondblclick="editCardTitle('${card.id}','${tabId}',this)" title="Duplo clique para editar">${card.title}</div>
       <span class="kanban-col-count">${total}</span>
@@ -1622,9 +1651,8 @@ function makeKanbanCardHTML(card, t, tabId, dayMode=false){
           readonly
           oninput="autoResizeTextarea(this);kanbanSaveTitle('${cid}','${t.id}',this.value)"
           >${(t.l||'').replace(/</g,'&lt;')}</textarea>
-        <div class="kanban-card-meta">
+        <div class="kanban-card-meta" style="display:none;">
 
-          ${subs.length?`<span class="kanban-card-sub">◻ ${subDone}/${subs.length}</span>`:''}
           ${dayMode&&t._cardTitle?`<span style="font-size:10px;background:${t._cardBg||'#eee'};color:${t._cardColor||'#666'};padding:1px 6px;border-radius:20px">${t._cardTitle}</span>`:''}
         </div>
       </div>
@@ -4230,13 +4258,14 @@ function toggleDetailExpand(){
       const toolbar=document.createElement('div');
       toolbar.style.cssText='display:flex;align-items:center;gap:2px;padding:4px 28px;border-bottom:1px solid var(--g100);flex-shrink:0;';
       toolbar.innerHTML=`
+        <button class="td-rich-btn" onclick="ovHeader()" title="Cabeçalho" style="font-weight:700;font-size:11px;">H</button>
+        <div class="td-rich-sep"></div>
         <button class="td-rich-btn" onclick="ovFmt('bold')" title="Negrito"><b>B</b></button>
         <button class="td-rich-btn" onclick="ovFmt('italic')" title="Itálico"><i>I</i></button>
         <button class="td-rich-btn" onclick="ovFmt('strikeThrough')" title="Riscado" style="text-decoration:line-through;">S</button>
-        <button class="td-rich-btn" onclick="ovHighlight()" title="Destacar" style="background:#43b8cf4f;">M</button>
-        <button class="td-rich-btn" onclick="ovFmt('superscript')" style="font-size:11px;">x²</button>
+        <button class="td-rich-btn" onclick="ovHighlight()" title="Destacar" style="background:#43b8cf4f;border-radius:3px;">M</button>
         <div class="td-rich-sep"></div>
-        <button class="td-rich-btn" onclick="ovQuote()" title="Citação" style="font-size:14px;font-style:italic;">"</button>
+        <button class="td-rich-btn" onclick="ovQuote()" title="Citação" style="font-style:italic;font-size:14px;">"</button>
         <button class="td-rich-btn" onclick="ovCheckbox()">☑</button>
         <button class="td-rich-btn" onclick="ovHR()">─</button>
         <div class="td-rich-sep"></div>
@@ -5329,10 +5358,11 @@ function deleteExtLink(e,id){
   e.stopPropagation();
   extLinks=extLinks.filter(l=>l.id!==id);
   saveExtLinks();renderExtLinks();
-  if(document.getElementById('view-ext')?.classList.contains('active')) sidebarNav('nexus');
+  // restored: if(document.getElementById('view-ext')?.classList.contains('active')) sidebarNav('nexus');
 }
 
-initCal();renderCal();updateTopbarDate();sidebarNav('nexus');renderPicker();setTimeout(updateSidebarWidgets,200);
+initCal();renderCal();updateTopbarDate();renderPicker();
+setTimeout(()=>{const nb=document.getElementById('tab-nexus');if(nb)switchView('nexus',nb);},50);setTimeout(updateSidebarWidgets,200);
 loadExtLinks();
 loadSbHello();
 // notification permission removed
@@ -5894,7 +5924,8 @@ function loadState(){
 // Carregar localStorage como fallback imediato
 loadState();
 // Re-renderizar com dados carregados
-renderCal();sidebarNav('nexus');renderPicker();renderSidebarCats();updateSidebarWidgets();populateTimeSelects();
+renderCal();renderPicker();renderSidebarCats();
+setTimeout(()=>{const nb=document.getElementById('tab-nexus');if(nb)switchView('nexus',nb);},200);updateSidebarWidgets();populateTimeSelects();
 // Carregar dados da nuvem (sobrescreve localStorage)
 setTimeout(()=>loadFromAppsScript(), 300);
 
@@ -6378,6 +6409,44 @@ function openPomodoro(){
   document.body.appendChild(w);
 }
 
+
+function tdHeader(){
+  const ed=document.getElementById('td-note-rich')||document.getElementById('td-rich-editor');
+  if(!ed) return; ed.focus();
+  const sel=window.getSelection();
+  if(!sel||sel.rangeCount===0) return;
+  const block=sel.getRangeAt(0).commonAncestorContainer.parentElement.closest('h1,h2,h3,p,div');
+  if(block&&(block.tagName==='H1'||block.tagName==='H2'||block.tagName==='H3')){
+    document.execCommand('formatBlock',false,'p');
+  } else {
+    document.execCommand('formatBlock',false,'h2');
+  }
+}
+function tdHighlight(){
+  const ed=document.getElementById('td-note-rich')||document.getElementById('td-rich-editor');
+  if(!ed) return; ed.focus();
+  const sel=window.getSelection();
+  if(!sel||sel.isCollapsed) return;
+  document.execCommand('insertHTML',false,'<mark style="background:#43b8cf4f;border-radius:3px;padding:0 2px;">'+sel.toString()+'</mark>');
+}
+function tdQuote(){
+  const ed=document.getElementById('td-note-rich')||document.getElementById('td-rich-editor');
+  if(!ed) return; ed.focus();
+  document.execCommand('formatBlock',false,'blockquote');
+}
+function ovHeader(){
+  const ed=document.getElementById('ov-editor');
+  if(!ed) return; ed.focus();
+  const sel=window.getSelection();
+  if(!sel||sel.rangeCount===0) return;
+  const block=sel.getRangeAt(0).commonAncestorContainer.parentElement?.closest('h1,h2,h3,p,div');
+  if(block&&['H1','H2','H3'].includes(block.tagName)){
+    document.execCommand('formatBlock',false,'p');
+  } else {
+    document.execCommand('formatBlock',false,'h2');
+  }
+}
+
 </script>
 <!-- TASK DETAIL PANEL -->
 <div class="task-detail-overlay" id="td-overlay" onclick="closeTaskDetail()"></div>
@@ -6451,15 +6520,21 @@ function openPomodoro(){
 
   <!-- TOOLBAR sempre visível -->
   <div class="td-rich-toolbar" id="td-rich-toolbar" style="display:flex;padding:2px 16px;border-bottom:1px solid var(--g100);margin-bottom:0;">
-    <button class="td-rich-btn" onclick="tdFmt('bold')"><b>B</b></button>
-    <button class="td-rich-btn" onclick="tdFmt('italic')"><i>I</i></button>
-    <button class="td-rich-btn" onclick="tdFmt('superscript')" style="font-size:10px;">x²</button>
+    <button class="td-rich-btn" onmousedown="event.preventDefault();tdHeader()" title="Cabeçalho/normal" style="font-weight:700;font-size:11px;">H</button>
     <div class="td-rich-sep"></div>
-    <button class="td-rich-btn" onclick="tdInsertCheckbox()">☑</button>
-    <button class="td-rich-btn" onclick="tdInsertHR()">─</button>
+    <button class="td-rich-btn" onmousedown="event.preventDefault();tdFmt('bold')"><b>B</b></button>
+    <button class="td-rich-btn" onmousedown="event.preventDefault();tdFmt('italic')"><i>I</i></button>
+    <button class="td-rich-btn" onmousedown="event.preventDefault();tdFmt('strikeThrough')" style="text-decoration:line-through;">S</button>
+    <button class="td-rich-btn" onmousedown="event.preventDefault();tdHighlight()" style="background:#43b8cf4f;border-radius:3px;">M</button>
     <div class="td-rich-sep"></div>
-    <button class="td-rich-btn" onclick="tdFmt('insertUnorderedList')">•</button>
-    <button class="td-rich-btn" onclick="tdFmt('insertOrderedList')">1.</button>
+    <button class="td-rich-btn" onmousedown="event.preventDefault();tdQuote()" style="font-style:italic;font-size:14px;">"</button>
+    <button class="td-rich-btn" onmousedown="event.preventDefault();tdInsertCheckbox()">☑</button>
+    <button class="td-rich-btn" onmousedown="event.preventDefault();tdInsertHR()">─</button>
+    <div class="td-rich-sep"></div>
+    <button class="td-rich-btn" onmousedown="event.preventDefault();tdFmt('insertUnorderedList')">•</button>
+    <button class="td-rich-btn" onmousedown="event.preventDefault();tdFmt('insertOrderedList')">1.</button>
+    <div class="td-rich-sep"></div>
+    <button class="td-rich-btn" onmousedown="event.preventDefault();tdFmt('removeFormat')" title="Remover formatação" style="font-size:10px;color:var(--g400);">✕</button>
   </div>
 
   <!-- NOTAS — rich contenteditable -->
