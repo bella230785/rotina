@@ -34,13 +34,14 @@ body{
   border-radius:16px;
   overflow:hidden;
   display:flex;
+  position:relative;
   box-shadow:0 8px 40px rgba(0,0,0,.18);
 }
 
 /* ── SIDEBAR ── */
 .sidebar{
   width:196px;flex-shrink:0;background:var(--white);
-  border-right:1px solid var(--g100);
+  border-right:1px solid var(--g75,#f0f0f0);
   display:flex;flex-direction:column;padding:14px 0;overflow-y:auto;overflow-x:hidden;
 }
 .sb-logo{font-size:17px;font-weight:700;color:var(--g800);padding:2px 16px 12px;letter-spacing:-.01em;}
@@ -72,9 +73,9 @@ body{
 
 /* ── TASK PANEL ── */
 .task-panel{
-  width:210px;min-width:120px;max-width:420px;
+  width:221px;min-width:120px;max-width:440px;
   flex-shrink:0;background:var(--white);
-  border-right:1px solid var(--g100);
+  border-right:1px solid var(--g75,#f0f0f0);
   display:flex;flex-direction:column;overflow:hidden;
   position:relative;
 }
@@ -126,12 +127,17 @@ body{
 
 /* ── ESTILO TICKTICK — item de tarefa ── */
 .task-item{
-  display:flex;align-items:flex-start;gap:10px;
-  padding:7px 16px;
+  display:flex;align-items:center;gap:10px;
+  padding:7px 14px;
   background:none;cursor:pointer;
-  transition:background .08s;font-size:13px;color:var(--g800);
+  transition:background .08s;color:#2c2c2c;
   user-select:none;position:relative;
   border:none;border-radius:0;box-shadow:none;
+  min-height:34px;
+}
+.task-item::after{
+  content:'';position:absolute;bottom:0;left:14px;right:14px;
+  height:1px;background:var(--g100);
 }
 .task-item:hover{background:var(--g50);}
 .task-item.dragging-task{opacity:.3;}
@@ -140,8 +146,8 @@ body{
 
 /* Checkbox redondo estilo TickTick */
 .task-cb{
-  width:16px;height:16px;border-radius:50%;
-  border:1.5px solid var(--g300);flex-shrink:0;margin-top:2px;
+  width:13px;height:13px;border-radius:50%;
+  border:1.5px solid var(--g250,#ccc);flex-shrink:0;margin-top:0;
   cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;
   background:none;
 }
@@ -181,7 +187,7 @@ body{
 }
 .tp-cat-group-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .tp-cat-group-name{font-size:12px;font-weight:600;color:var(--g700);flex:1;}
-.tp-cat-group-count{font-size:10px;color:var(--g400);background:var(--g100);padding:1px 6px;border-radius:20px;}
+.tp-cat-group-count{display:none;}
 .tp-sort-btn{font-size:10px;color:var(--g400);background:none;border:1px solid var(--g150);border-radius:20px;padding:2px 8px;cursor:pointer;font-family:inherit;transition:all .12s;}
 .tp-sort-btn:hover{color:var(--g700);border-color:var(--g300);}
 .tp-sort-btn.active{color:var(--accent);border-color:var(--accent);background:var(--accent-l);}
@@ -394,7 +400,7 @@ body{
 .nav-arrow:hover{background:var(--g50);}
 .today-btn{font-size:11px;font-weight:500;color:var(--g600);padding:4px 10px;border:1px solid var(--g150);border-radius:7px;background:white;cursor:pointer;font-family:inherit;}
 .today-btn:hover{background:var(--g50);}
-.date-range{font-size:13px;font-weight:600;color:var(--g800);}
+.date-range{font-size:11px;font-weight:500;color:var(--g600);}
 .subbar-right{margin-left:auto;display:flex;align-items:center;gap:7px;}
 .hint-pill{font-size:10px;color:var(--g300);}
 
@@ -428,7 +434,7 @@ body{
 .block:hover{box-shadow:0 2px 10px rgba(0,0,0,.12);}
 .block:active{cursor:grabbing;opacity:.8;}
 .block.dragging{opacity:.3;}
-.block-title{font-weight:600;font-size:12px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.block-title{font-weight:400;font-size:12px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
 .block-sub{font-size:10px;opacity:.65;margin-top:2px;}
 .bacts{display:none;position:absolute;top:3px;right:3px;gap:2px;}
 .block:hover .bacts{display:flex;}
@@ -938,8 +944,10 @@ iframe.embed{flex:1;border:none;width:100%;height:100%;}
 
 /* ── TIPOGRAFIA (adaptado do TickTick) ── */
 :root {
-  --note-font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
-  --note-fs: 14px;
+  --ff: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --fs: 13px;          /* ← ALTERE AQUI para mudar a fonte global */
+  --note-font: var(--ff);
+  --note-fs: calc(var(--fs) + 1px);
   --note-lh: 1.6;
   --note-ls: 0.15px;
   --quote-text: #312f2ff5;
@@ -982,6 +990,40 @@ iframe.embed{flex:1;border:none;width:100%;height:100%;}
   font-style: normal !important;
 }
 
+
+/* ── SCROLLBAR MODERNA ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--g150,#e5e5e5); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--g300); }
+* { scrollbar-width: thin; scrollbar-color: var(--g150,#e5e5e5) transparent; }
+
+
+/* ── FONTE PADRONIZADA ── */
+body, .app-card, button, input, textarea, select {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+/* Base: 13px para elementos de UI, 14px para conteúdo */
+/* font sizes now via --fs variable */
+
+
+/* ── FONTE GLOBAL ── */
+html, body, .app-card, button, input, textarea, select, [class] {
+  font-family: var(--ff) !important;
+  -webkit-font-smoothing: antialiased;
+}
+/* Tamanhos relativos ao --fs */
+body { font-size: var(--fs); }
+.sb-item, .tab, .kv-btn, .kanban-col-title,
+.kanban-card-title, .tp-cat-group-name,
+.task-panel-cat-title, .tf, .tp-sort-btn,
+.task-action-btn, .tp-add-input { font-size: var(--fs) !important; }
+.task-item { font-size: calc(var(--fs) + 0.5px) !important; color: #2c2c2c !important; }
+.block-title { font-size: calc(var(--fs) - 1px) !important; }
+#ov-editor, .td-note-editor { font-size: calc(var(--fs) + 1px) !important; }
+.tp-cat-group-name { font-size: calc(var(--fs) - 0.5px) !important; }
+
 </style>
 </head>
 <body>
@@ -1005,10 +1047,14 @@ iframe.embed{flex:1;border:none;width:100%;height:100%;}
   <div class="sb-sep"></div>
   <div id="sb-dyn-cats"></div>
   <div class="sb-sep"></div>
-  <div class="sb-item" id="sb-habit" onclick="openHabitTracker(this)"><span class="sb-item-lbl">habit tracker</span></div>
+  <div class="sb-item" onclick="openPomodoro()" style="font-size:var(--fs);">
+    <span style="font-size:14px;">🍅</span>
+    <span class="sb-item-lbl">pomodoro</span>
+  </div>
+  <div class="sb-item" id="sb-habit" onclick="openHabitTracker(this)" style="font-size:var(--fs);"><span class="sb-item-lbl">habit tracker</span></div>
   <div class="sb-sep"></div>
-  <div class="sb-item" onclick="openManageCategories()" style="color:var(--g300);font-size:10px;padding:3px 10px;"><span class="sb-item-lbl">gerir categorias</span></div>
-  <div class="sb-item" onclick="addNewCategoryFromSidebar()" style="color:var(--g300);font-size:10px;padding:3px 10px;"><span class="sb-item-lbl">＋ nova categoria</span></div>
+  <div class="sb-item" onclick="openManageCategories()" style="color:var(--g300);font-size:var(--fs);padding:3px 10px;"><span class="sb-item-lbl">gerir categorias</span></div>
+  <div class="sb-item" onclick="addNewCategoryFromSidebar()" style="color:var(--g300);font-size:var(--fs);padding:3px 10px;"><span class="sb-item-lbl">＋ nova categoria</span></div>
 
 
   <div class="sb-bottom">
@@ -1020,12 +1066,12 @@ iframe.embed{flex:1;border:none;width:100%;height:100%;}
 </div>
 
 <!-- SIDEBAR TOGGLE -->
-<button id="sb-toggle-btn" onclick="toggleSidebar()" title="Ocultar sidebar"
-  style="width:14px;flex-shrink:0;background:var(--g50);border:none;
-  border-left:1px solid var(--g100);border-right:1px solid var(--g100);
-  cursor:pointer;color:var(--g300);font-size:11px;display:flex;
-  align-items:center;justify-content:center;padding:0;transition:background .12s;"
-  onmouseover="this.style.background='var(--g100)'" onmouseout="this.style.background='var(--g50)'">‹</button>
+<button id="sb-toggle-btn" onclick="toggleSidebar()" title="Ocultar/mostrar sidebar"
+  style="position:absolute;left:188px;top:50%;transform:translateY(-50%);z-index:100;
+  width:16px;height:32px;background:white;border:1px solid var(--g100);border-radius:0 6px 6px 0;
+  cursor:pointer;color:var(--g300);font-size:10px;display:flex;
+  align-items:center;justify-content:center;padding:0;transition:all .15s;box-shadow:2px 0 6px rgba(0,0,0,.06);"
+  onmouseover="this.style.color='var(--g600)'" onmouseout="this.style.color='var(--g300)'">‹</button>
 
 <!-- TASK PANEL -->
 <div class="task-panel" id="task-panel">
@@ -1439,37 +1485,33 @@ function renameChip(tabId, wrapId, cardId, btn){
 
 function setChecklistChip(tabId, wrapId, cardId, e, btn){
   if(!window._activeChip) window._activeChip={};
-  if(window._activeChip[tabId]===cardId){
-    // Already active: rename inline directly in the button
-    if(btn){
-      const cur=btn.textContent.trim();
-      btn.contentEditable='true';
-      btn.style.outline='1px solid var(--accent)';
-      btn.focus();
-      // Select all text
-      const range=document.createRange();range.selectNodeContents(btn);
-      const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
-      function saveRename(){
-        btn.contentEditable='false';
-        btn.style.outline='';
-        const val=btn.textContent.trim()||cur;
-        const card=(CARD_DEFS_BY_TAB[tabId]||[]).find(c=>c.id===cardId);
-        if(card&&val!==cur){ card.title=val; saveState(); renderChecklist(tabId,wrapId); }
-      }
-      btn.onblur=saveRename;
-      btn.onkeydown=e=>{
-        if(e.key==='Enter'){e.preventDefault();btn.blur();}
-        if(e.key==='Escape'){btn.textContent=cur;btn.blur();}
-      };
-    }
+  if(window._activeChip[tabId]===cardId && !event?.shiftKey){
+    // Second click on active chip: deselect and show all
+    window._activeChip[tabId]=null;
+    renderChecklist(tabId, wrapId);
     return;
   }
+
   window._activeChip[tabId]=cardId;
   renderChecklist(tabId, wrapId);
+  // Filter: hide all kanban cols except the selected one
   setTimeout(()=>{
-    const el=document.getElementById('kl-'+cardId);
-    if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
-  },100);
+    const kanban=document.getElementById('study-kanban')||document.querySelector('.kanban-wrap');
+    if(kanban){
+      kanban.querySelectorAll('.kanban-col').forEach(col=>{
+        const id=col.dataset.cardId;
+        col.style.display=(id===cardId||!cardId)?'':'none';
+      });
+    }
+    // Also show only the selected col in cl-wrap
+    const clWrap=document.getElementById(wrapId);
+    if(clWrap){
+      clWrap.querySelectorAll('.kanban-col').forEach(col=>{
+        const id=col.dataset.cardId;
+        col.style.display=(id===cardId||!cardId)?'':'none';
+      });
+    }
+  },50);
 }
 
 function setTabView(tabId, wrapId, mode){
@@ -1581,7 +1623,7 @@ function makeKanbanCardHTML(card, t, tabId, dayMode=false){
           oninput="autoResizeTextarea(this);kanbanSaveTitle('${cid}','${t.id}',this.value)"
           >${(t.l||'').replace(/</g,'&lt;')}</textarea>
         <div class="kanban-card-meta">
-          ${t.due?`<span class="kanban-card-due ${dc}">📅 ${dl}</span>`:''}
+
           ${subs.length?`<span class="kanban-card-sub">◻ ${subDone}/${subs.length}</span>`:''}
           ${dayMode&&t._cardTitle?`<span style="font-size:10px;background:${t._cardBg||'#eee'};color:${t._cardColor||'#666'};padding:1px 6px;border-radius:20px">${t._cardTitle}</span>`:''}
         </div>
@@ -3074,7 +3116,7 @@ function renderTaskPanelByCats(allTasks, title, addCatId){
         ondrop="this.style.background='';handleTaskPanelDrop(event,'${cid}')">
         <span class="tp-cat-group-dot" style="background:${cat.bg}"></span>
         <span class="tp-cat-group-name" style="text-transform:lowercase;flex:1;" onclick="toggleCatGroup('${cid}',event)">${cat.name}</span>
-        <span class="tp-cat-group-count" onclick="toggleCatGroup('${cid}',event)">${pending.length+sched.length}</span>
+
       </div>
       <div id="tcg-${cid}" style="display:${_collapsed?'none':'block'}">
       ${pending.map(t=>taskItemHTML(t)).join('')}
@@ -3117,6 +3159,50 @@ let taskSortMode="priority";
 
 function bindTaskDrag(list){
   list.querySelectorAll('.task-item[data-taskid]').forEach(el=>{
+    // Dragover on task items for reorder feedback
+    el.addEventListener('dragover',e=>{
+      if(!draggingTask) return;
+      e.preventDefault();
+      e.stopPropagation();
+      el.style.borderTop='2px solid var(--accent)';
+    });
+    el.addEventListener('dragleave',()=>el.style.borderTop='');
+    el.addEventListener('drop',e=>{
+      el.style.borderTop='';
+      if(!draggingTask) return;
+      e.preventDefault();
+      e.stopPropagation();
+      // Reorder: move draggingTask before this item in the same card
+      const fromId=draggingTask.id;
+      const toId=el.dataset.taskid;
+      if(fromId===toId) return;
+      // Find both in CARD_DEFS and move
+      Object.values(CARD_DEFS_BY_TAB).forEach(defs=>{
+        defs.forEach(card=>{
+          const fromIdx=card.tasks.findIndex(t=>t.id===fromId);
+          const toIdx=card.tasks.findIndex(t=>t.id===toId);
+          if(fromIdx>=0&&toIdx>=0){
+            const [moved]=card.tasks.splice(fromIdx,1);
+            const newTo=card.tasks.findIndex(t=>t.id===toId);
+            card.tasks.splice(newTo,0,moved);
+          }
+        });
+      });
+      // Also reorder in TASK_DATA
+      ['semana','mes','nexus'].forEach(tab=>{
+        const fromIdx=TASK_DATA[tab].findIndex(t=>t.id===fromId);
+        const toIdx=TASK_DATA[tab].findIndex(t=>t.id===toId);
+        if(fromIdx>=0&&toIdx>=0){
+          const [moved]=TASK_DATA[tab].splice(fromIdx,1);
+          const newTo=TASK_DATA[tab].findIndex(t=>t.id===toId);
+          TASK_DATA[tab].splice(newTo,0,moved);
+        }
+      });
+      draggingTask=null;
+      if(currentFilterCat) filterTasksBy(currentFilterCat);
+      else renderTaskPanelForKey(currentSidebarKey);
+      saveState();
+    });
     el.addEventListener('dragstart',e=>{
       const id=el.dataset.taskid;
       const allT=[...TASK_DATA.semana,...TASK_DATA.mes,...TASK_DATA.nexus];
@@ -3384,10 +3470,10 @@ function toggleSidebar(){
   const btn=document.getElementById('sb-toggle-btn');
   if(sidebarVisible){
     sb.style.width='196px';sb.style.overflow='';
-    if(btn) btn.textContent='‹';
+    if(btn){btn.textContent='‹';btn.style.left='188px';}
   } else {
     sb.style.width='0';sb.style.overflow='hidden';
-    if(btn) btn.textContent='›';
+    if(btn){btn.textContent='›';btn.style.left='0px';}
   }
 }
 function saveSbRotinaLbl(val){
@@ -3797,11 +3883,8 @@ function taskItemHTML(t,isDone=false,isScheduled=false){
   const subDone=(t.subtasks||[]).filter(s=>s.done).length;
 
   const metaParts=[];
-  if(t.due&&!d) metaParts.push(`<span class="task-due ${dueClass}">📅 ${dueLabel}</span>`);
-  if(t.time&&!d) metaParts.push(`<span class="task-alarm">🕐 ${t.time}${t.duration?' · '+t.duration:''}</span>`);
-  if(t.alarm&&!d) metaParts.push(`<span class="task-alarm">⏰ ${t.alarm}</span>`);
-  if(subCount>0) metaParts.push(`<span class="task-sub-count">◻ ${subDone}/${subCount}</span>`);
-  if(sched&&!d) metaParts.push(`<span class="task-scheduled-badge">agendada</span>`);
+  // Only show subtask count - no dates, times, badges
+
 
   // Cor do checkbox pela prioridade (só borda, sem badge)
   const cbStyle=p===1?'border-color:#f87171':p===2?'border-color:#fbbf24':'';
@@ -5246,10 +5329,10 @@ function deleteExtLink(e,id){
   e.stopPropagation();
   extLinks=extLinks.filter(l=>l.id!==id);
   saveExtLinks();renderExtLinks();
-  if(document.getElementById('view-ext')?.classList.contains('active')) sidebarNav('semana');
+  if(document.getElementById('view-ext')?.classList.contains('active')) sidebarNav('nexus');
 }
 
-initCal();renderCal();updateTopbarDate();sidebarNav('semana');renderPicker();setTimeout(updateSidebarWidgets,200);
+initCal();renderCal();updateTopbarDate();sidebarNav('nexus');renderPicker();setTimeout(updateSidebarWidgets,200);
 loadExtLinks();
 loadSbHello();
 // notification permission removed
@@ -5811,7 +5894,7 @@ function loadState(){
 // Carregar localStorage como fallback imediato
 loadState();
 // Re-renderizar com dados carregados
-renderCal();sidebarNav('semana');renderPicker();renderSidebarCats();updateSidebarWidgets();populateTimeSelects();
+renderCal();sidebarNav('nexus');renderPicker();renderSidebarCats();updateSidebarWidgets();populateTimeSelects();
 // Carregar dados da nuvem (sobrescreve localStorage)
 setTimeout(()=>loadFromAppsScript(), 300);
 
@@ -6250,6 +6333,49 @@ function initFloatingToolbar(editorEl){
       toolbar.style.display='none';
     }
   });
+}
+
+
+function openPomodoro(){
+  const existing=document.getElementById('pomodoro-widget');
+  if(existing){existing.remove();return;}
+  const w=document.createElement('div');
+  w.id='pomodoro-widget';
+  w.style.cssText='position:fixed;bottom:20px;right:20px;z-index:9999;background:white;border:1px solid var(--g150);border-radius:14px;padding:18px 22px;box-shadow:0 8px 32px rgba(0,0,0,.15);min-width:180px;text-align:center;';
+  let mins=25,secs=0,running=false,interval=null,mode='work';
+  function fmt(n){return String(n).padStart(2,'0');}
+  function tick(){
+    if(secs===0){if(mins===0){clearInterval(interval);running=false;updateUI();return;}mins--;secs=59;}
+    else secs--;
+    updateUI();
+  }
+  function updateUI(){
+    w.querySelector('#pom-time').textContent=fmt(mins)+':'+fmt(secs);
+    w.querySelector('#pom-btn').textContent=running?'⏸':'▶';
+  }
+  w.innerHTML=`
+    <div style="font-size:11px;color:var(--g400);margin-bottom:8px;letter-spacing:.05em;">POMODORO</div>
+    <div id="pom-time" style="font-size:36px;font-weight:700;color:var(--g800);font-variant-numeric:tabular-nums;letter-spacing:-1px;">${fmt(mins)}:${fmt(secs)}</div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
+      <button id="pom-btn" onclick="(()=>{const w=document.getElementById('pomodoro-widget');w._toggle();})()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:6px 18px;cursor:pointer;font-size:18px;">▶</button>
+      <button onclick="(()=>{const w=document.getElementById('pomodoro-widget');w._reset();})()" style="background:none;border:1px solid var(--g150);border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px;color:var(--g500);">↺</button>
+    </div>
+    <div style="display:flex;gap:6px;justify-content:center;margin-top:10px;">
+      <button onclick="(()=>{const w=document.getElementById('pomodoro-widget');w._set(25,0,'work');})()" style="font-size:10px;background:none;border:none;cursor:pointer;color:var(--g400);">25m</button>
+      <button onclick="(()=>{const w=document.getElementById('pomodoro-widget');w._set(5,0,'break');})()" style="font-size:10px;background:none;border:none;cursor:pointer;color:var(--g400);">5m</button>
+      <button onclick="(()=>{const w=document.getElementById('pomodoro-widget');w._set(15,0,'long');})()" style="font-size:10px;background:none;border:none;cursor:pointer;color:var(--g400);">15m</button>
+    </div>
+    <button onclick="document.getElementById('pomodoro-widget').remove()" style="position:absolute;top:8px;right:10px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--g300);">✕</button>
+  `;
+  w.style.position='fixed';
+  w._toggle=()=>{
+    if(running){clearInterval(interval);running=false;}
+    else{interval=setInterval(tick,1000);running=true;}
+    updateUI();
+  };
+  w._reset=()=>{clearInterval(interval);running=false;mins=mode==='work'?25:mode==='break'?5:15;secs=0;updateUI();};
+  w._set=(m,s,md)=>{clearInterval(interval);running=false;mins=m;secs=s;mode=md;updateUI();};
+  document.body.appendChild(w);
 }
 
 </script>
