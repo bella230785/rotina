@@ -1458,8 +1458,7 @@ button, input, select, textarea { font-size: var(--fs) !important; }
         title="Adicionar">＋</button>
     </div>
   </div>
-  <div class="task-filters" id="task-filters">
-    <button class="tf" id="tf-today" onclick="setTaskFilter('today',this)">hoje</button>
+  <div class="task-filters" id="task-filters" style="display:none;">
     <button class="tf active" id="tf-all" onclick="setTaskFilter('all',this)">todas</button>
   </div>
   <div class="task-list" id="task-list"></div>
@@ -3687,6 +3686,7 @@ const PALETTE=[
 const FONT_COLORS=['#ffffff','#1A1A1A','#3D3580','#1A4A7A','#8B2035','#45818e','#7b7575','#7A4010','#8b8a8a'];
 
 // ── CATEGORIAS DINÂMICAS ──
+const CAT_ICON_POOL=['📁','🎯','💡','🔖','🌿','⚡','🎨','📌','🔥','🧩','🌊','🦋','🎬','📝','🗂','🏆','🌸','🔑','💎','🎵'];
 let CATEGORIES=[
   {id:'nexus',  name:'nexus',  icon:'', bg:'#e8e4f0', color:'#5a4a7a'},
   {id:'study',  name:'study',  icon:'', bg:'#e4eee8', color:'#3a5a4a'},
@@ -4090,31 +4090,9 @@ function renderTaskPanelForKey(key, filterCatId=null){
     return;
   }
   if(!map||map.mode==='task_tab'){
-    title='tasks';
-    // Collect from TASK_DATA (manually added tasks)
-    allTasks=[...TASK_DATA.semana,...TASK_DATA.mes].map(t=>({
-      id:t.id, label:t.label, note:t.note||'',
-      catId:t.catId, due:t.due, alarm:t.alarm, priority:t.priority,
-      subtasks:t.subtasks,
-    }));
-    // Also collect from ALL CARD_DEFS_BY_TAB (kanban tasks)
-    Object.entries(CARD_DEFS_BY_TAB).forEach(([tabId,defs])=>{
-      defs.forEach(card=>{
-        card.tasks.forEach(t=>{
-          allTasks.push({
-            id:t.id, label:t.l||'', note:t.n||'',
-            catId:card.id, due:t.due||'', alarm:t.alarm||'',
-            time:t.time||'', duration:t.duration||'',
-            priority:t.priority||4, subtasks:t.subtasks||[],
-            _bg:card.iconBg, _color:card.color
-          });
-        });
-      });
-    });
-    // Deduplicate
-    const seen=new Set();
-    allTasks=allTasks.filter(t=>{if(seen.has(t.id))return false;seen.add(t.id);return true;});
-    addCatId=null;
+    // Default to nexus when no specific view is set
+    renderTaskPanelForKey('nexus', filterCatId);
+    return;
   } else if(map.mode==='checklist'){
     title=map.label.toLowerCase();
     addCatId=null;
@@ -4204,6 +4182,9 @@ function toggleTaskPanel(btn){
     tp.classList.add('tp-open');
     if(btn) btn.classList.add('active');
     if(arrow) arrow.style.display='flex';
+    // Default to nexus category
+    renderTaskPanelForKey('nexus');
+    currentSidebarKey='nexus';
   } else {
     tp.classList.remove('tp-open');
     if(btn) btn.classList.remove('active');
@@ -4661,7 +4642,11 @@ function taskItemHTML(t,isDone=false,isScheduled=false){
 
   return`<div class="task-item${d?' done-task':''}${sched&&!d?' scheduled':''}"
       draggable="true" data-taskid="${t.id}" data-prio="${p}"
-      data-bg="${cat.bg}" data-color="${cat.color}" data-label="${(t.label||'').replace(/"/g,'&quot;')}">
+      data-bg="${cat.bg}" data-color="${cat.color}" data-label="${(t.label||'').replace(/"/g,'&quot;')}"
+      ondragstart="tpDragStart(event,this)"
+      ondragover="tpDragOver(event,this)"
+      ondrop="tpDrop(event,this)"
+      ondragleave="this.style.borderTop=''">
     <div class="task-cb${d?' checked':''}" style="${p===1?'border-color:#f87171':p===2?'border-color:#fbbf24':''}"
       onclick="event.stopPropagation();toggleTaskDone('${t.id}')"></div>
     <div class="task-item-body" ondblclick="openTaskDetail('${t.id}')" style="cursor:default">
@@ -4674,6 +4659,47 @@ function taskItemHTML(t,isDone=false,isScheduled=false){
       <button class="task-action-btn del" onclick="event.stopPropagation();deleteTask('${t.id}',event)" title="Apagar">✕</button>
     </div>
   </div>`;
+}
+
+// ── TASK PANEL DRAG REORDER ──────────────────────────────────────────────────
+let _tpDragId=null;
+
+function tpDragStart(e, el){
+  if(draggingTask||dragSrc) return; // don't interfere with calendar drag
+  _tpDragId=el.dataset.taskid;
+  e.dataTransfer.setData('text/plain', _tpDragId);
+  e.dataTransfer.effectAllowed='move';
+  setTimeout(()=>el.style.opacity='.4',0);
+}
+
+function tpDragOver(e, el){
+  if(!_tpDragId||_tpDragId===el.dataset.taskid) return;
+  e.preventDefault();
+  e.stopPropagation();
+  el.style.borderTop='2px solid var(--accent,#7C6FCD)';
+}
+
+function tpDrop(e, el){
+  e.stopPropagation();
+  el.style.borderTop='';
+  if(!_tpDragId||_tpDragId===el.dataset.taskid) return;
+  e.preventDefault();
+  const toId=el.dataset.taskid;
+  // Reorder in all data stores
+  const stores=[TASK_DATA.semana, TASK_DATA.mes, TASK_DATA.nexus,
+    ...Object.values(CARD_DEFS_BY_TAB).flatMap(defs=>defs.map(c=>c.tasks))];
+  stores.forEach(arr=>{
+    if(!Array.isArray(arr)) return;
+    const fromIdx=arr.findIndex(t=>(t.id||t.l)===_tpDragId||(t.id||t.l)===_tpDragId);
+    const toIdx  =arr.findIndex(t=>(t.id||t.l)===toId);
+    if(fromIdx>=0&&toIdx>=0&&fromIdx!==toIdx){
+      const [item]=arr.splice(fromIdx,1);
+      arr.splice(toIdx,0,item);
+    }
+  });
+  _tpDragId=null;
+  renderTaskPanelForKey(currentSidebarKey);
+  saveState();
 }
 
 function quickSetPriority(id, newPrio){
@@ -5493,7 +5519,8 @@ function addNewCategoryFromSidebar(){
   const icon=emojiMatch?emojiMatch[0].trim():'';
   const title=emojiMatch?raw.slice(emojiMatch[0].length).trim()||raw:raw;
   const newId='cat_'+Date.now();
-  CATEGORIES.push({id:newId,name:title,icon,bg:'#e8e8e8',color:'#555555'});
+  const autoIcon=icon||CAT_ICON_POOL[CATEGORIES.length%CAT_ICON_POOL.length];
+  CATEGORIES.push({id:newId,name:title,icon:autoIcon,bg:'#e8e8e8',color:'#555555'});
   renderPicker();renderSidebarCats();saveState();
   openManageCategories();
 }
@@ -5735,8 +5762,9 @@ function renderSidebarCats(){
     el.dataset.catId=cat.id;
     el.setAttribute('draggable','true');
     el.setAttribute('data-tip', cat.name);
+    const catIcon=cat.icon||(CAT_ICON_POOL[CATEGORIES.indexOf(cat)%CAT_ICON_POOL.length]);
     el.innerHTML=
-      `<span class="sb-cat-dot" style="background:${cat.bg}" onclick="event.stopPropagation();openCatColorPicker('${cat.id}',event)" title="Mudar cor"></span>`+
+      `<span class="sb-nav-icon" style="font-size:16px;flex-shrink:0;line-height:1;">${catIcon||'📁'}</span>`+
       `<span class="sb-cat-label">${cat.name}</span>`;
     // Cat reorder drag
     el.addEventListener('dragstart',e=>{
@@ -5772,16 +5800,7 @@ function renderSidebarCats(){
     });
     wrap.appendChild(el);
   });
-  // "todas" at bottom
-  {
-    const el=document.createElement('button');
-    el.className='sb-cat-item'+(currentFilterCat===null?' active':'');
-    el.dataset.catId='__all__';
-    el.setAttribute('data-tip','todas');
-    el.innerHTML='<span class="sb-cat-dot" style="background:var(--g200)"></span>'+
-      '<span class="sb-cat-label">todas</span>';
-    wrap.appendChild(el);
-  }
+  // 'todas' removed — use task panel header
   // Single delegated listener on wrap
   wrap.onclick=(e)=>{
     const item=e.target.closest('[data-cat-id]');
