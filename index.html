@@ -1218,6 +1218,11 @@ button, input, select, textarea { font-size: var(--fs) !important; }
 
 /* Vitals card drag reorder */
 .nut-vcard { transition:box-shadow .15s, opacity .15s, transform .15s; user-select:none; position:relative; }
+/* Card color picker */
+#nut-card-color-picker{position:fixed;z-index:500;background:var(--white);border:1px solid var(--g150);border-radius:14px;padding:10px;box-shadow:0 8px 28px rgba(0,0,0,.14);display:flex;flex-direction:column;gap:8px;min-width:160px;}
+.ncc-row{display:flex;gap:5px;flex-wrap:wrap;}
+.ncc-dot{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .1s,border-color .1s;}
+.ncc-dot:hover{transform:scale(1.25);border-color:var(--g300);}
 .nut-vcard .nvc-handle { position:absolute;top:7px;right:8px;opacity:0;transition:opacity .15s;cursor:grab;font-size:11px;color:var(--g300);line-height:1; }
 .nut-vcard:hover .nvc-handle { opacity:1; }
 .nut-vcard:active { cursor:grabbing; }
@@ -1556,9 +1561,15 @@ button, input, select, textarea { font-size: var(--fs) !important; }
 
         <!-- Header -->
         <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1.25rem;">
-          <div>
-            <div style="font-size:22px;font-weight:400;color:var(--g800);letter-spacing:-.01em;line-height:1.2;font-family:'DM Serif Display',serif;">hey you! 👋</div>
-            <div style="font-size:13px;color:var(--g400);margin-top:4px;" id="nut-welcome-date"></div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div>
+              <div style="font-size:22px;font-weight:400;color:var(--g800);letter-spacing:-.01em;line-height:1.2;font-family:'DM Serif Display',serif;">hey you! 👋</div>
+              <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+                <button onclick="nutNavDay(-1)" style="font-size:14px;line-height:1;background:none;border:none;cursor:pointer;color:var(--g400);padding:0 3px;transition:color .1s;" onmouseenter="this.style.color='var(--g800)'" onmouseleave="this.style.color='var(--g400)'">‹</button>
+                <div style="font-size:13px;color:var(--g400);" id="nut-welcome-date"></div>
+                <button onclick="nutNavDay(1)" id="nut-nav-next" style="font-size:14px;line-height:1;background:none;border:none;cursor:pointer;color:var(--g400);padding:0 3px;transition:color .1s;" onmouseenter="this.style.color='var(--g800)'" onmouseleave="this.style.color='var(--g400)'">›</button>
+              </div>
+            </div>
           </div>
           <div style="display:flex;align-items:center;gap:6px;">
             <div id="nut-sync-indicator" style="font-size:10px;color:var(--g400);opacity:0;transition:opacity 1s;"></div>
@@ -2857,7 +2868,12 @@ function renderCalDay(){
     const bd=cs[si];
     if(!bd){
       const ab=document.createElement('button');ab.className='add-btn';ab.textContent='+';
-      ab.onclick=()=>openPicker(dayIdx,si,row);row.appendChild(ab);
+      ab.onclick=()=>{
+        if(_calClipboard){ calPasteBlock(dayIdx,si); return; }
+        openPicker(dayIdx,si,row);
+      };
+      ab.title=_calClipboard?'Colar (clique) / Novo (Shift+clique)':'Novo slot';
+      row.appendChild(ab);
       row.addEventListener('contextmenu',e=>showEmptySlotContextMenu(e,di,si));
     } else { row.classList.add('has-block'); }
     if(!bd||!bd.fixed){
@@ -4196,22 +4212,32 @@ function toggleTaskPanel(btn){
 }
 
 function switchViewFromSb(id, btn){
-  // Activate tab
-  const tabEl = document.getElementById('tab-'+id);
-  if(tabEl){
-    if(id==='cal') switchView('cal', tabEl);
-    else if(id==='nexus') switchView('nexus', tabEl);
-    else if(id==='study') switchView('study', tabEl);
-    else switchView(id, tabEl);
-  } else {
-    switchView(id, null);
-  }
   // Update sidebar active state
   document.querySelectorAll('.sb-nav-item').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
-  // Also sync currentSidebarKey for task panel
-  const keyMap={cal:'semana',nexus:'nexus',study:'study',nutricao:'semana'};
-  if(keyMap[id]) renderTaskPanelForKey(keyMap[id]);
+
+  // Map sidebar id → task panel key
+  const keyMap={
+    cal:'semana', nutricao:'semana', semana:'semana',
+    nexus:'nexus', study:'study'
+  };
+  const panelKey=keyMap[id]||id;
+
+  // Always open task panel for that category
+  const tp=document.getElementById('task-panel');
+  if(tp){
+    const isOpen=tp.classList.contains('tp-open');
+    if(!isOpen){
+      tp.classList.add('tp-open');
+      const tasksBtn=document.getElementById('sb-nav-tasks');
+      if(tasksBtn) tasksBtn.classList.add('active');
+      const arr=document.getElementById('tp-collapse-btn');
+      if(arr) arr.style.display='flex';
+    }
+  }
+  renderTaskPanelForKey(panelKey);
+  currentSidebarKey=panelKey;
+  // Do NOT switch main view — keep whatever is showing
 }
 
 function sbSyncActiveFromTab(id){
@@ -6557,20 +6583,41 @@ function calCopyBlock(di, si){
   _calClipboard={slots,len,srcDi:di,srcSi:si};
   // Visual feedback
   const status=document.getElementById('sync-status')||document.getElementById('nut-sync-indicator');
-  if(status){ const prev=status.textContent; status.textContent='📋 copiado'; setTimeout(()=>status.textContent=prev,1500); }
+  if(status){ const prev=status.textContent; status.textContent='📋 copiado'; setTimeout(()=>{status.textContent=prev;},1500); }
+  // Show clipboard banner in cal
+  let banner=document.getElementById('cal-paste-banner');
+  if(!banner){
+    banner=document.createElement('div');
+    banner.id='cal-paste-banner';
+    banner.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);'+
+      'background:#5A50B8;color:#fff;font-size:12px;font-weight:600;padding:8px 18px;'+
+      'border-radius:20px;box-shadow:0 4px 16px rgba(0,0,0,.2);z-index:9999;'+
+      'display:flex;align-items:center;gap:10px;';
+    banner.innerHTML='📋 bloco copiado — clique em qualquer slot + para colar'+
+      ' <button onclick="calClearClipboard()" style="background:rgba(255,255,255,.25);border:none;color:#fff;'+
+      'border-radius:10px;padding:2px 8px;cursor:pointer;font-size:11px;">limpar</button>';
+    document.body.appendChild(banner);
+  }
+  banner.style.display='flex';
+}
+
+function calClearClipboard(){
+  _calClipboard=null;
+  const b=document.getElementById('cal-paste-banner');
+  if(b) b.style.display='none';
 }
 
 function calPasteBlock(di, si){
   if(!_calClipboard) return;
   pushUndo();
   const {slots,len}=_calClipboard;
-  // Check if space available
-  if(si+len > TOTAL_SLOTS) return;
-  for(let k=0;k<len;k++){
+  // Clamp to available space
+  const actualLen=Math.min(len, TOTAL_SLOTS-si);
+  for(let k=0;k<actualLen;k++){
     if(k<slots.length) calState[di][si+k]={...slots[k].bd};
-    else calState[di][si+k]=null;
   }
   renderCal(); saveState();
+  // Keep clipboard active so user can paste multiple times
 }
 
 function saveState(){
@@ -7578,6 +7625,7 @@ function nutInit(){
   // Init vitals card drag
   setTimeout(nutInitVcardDrag, 100);
   nutRenderOverviewContent();
+  setTimeout(nutRestoreCardColors, 200);
 }
 
 // ── FULL CROSS-COLUMN DRAG SYSTEM ──
@@ -8539,11 +8587,16 @@ function getActiveDate(){
 function nutNavDay(dir){
   const el=document.getElementById('nut-active-date');
   if(!el) return;
-  const parts=(el.value||nutTodayKey()).split('-').map(Number);
+  const current=el.value||nutTodayKey();
+  if(dir>0 && current>=nutTodayKey()) return; // no future
+  const parts=current.split('-').map(Number);
   const cur=new Date(parts[0],parts[1]-1,parts[2]);
   cur.setDate(cur.getDate()+dir);
   el.value=cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
   nutLoadDay();
+  // Dim › button when on today
+  const nextBtn=document.getElementById('nut-nav-next');
+  if(nextBtn) nextBtn.style.opacity=(el.value>=nutTodayKey()?'.3':'1');
 }
 
 function nutLoadDay(){
