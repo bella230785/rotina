@@ -314,6 +314,7 @@ body{
 .task-add:hover{color:var(--accent);}
 /* Grupos de categoria no task panel */
 .tp-cat-group{margin-bottom:4px;}
+.tp-cat-group{transition:border-top .1s;}
 .tp-cat-group-hdr{
   display:flex;align-items:center;gap:7px;
   padding:10px 16px 5px;
@@ -3813,14 +3814,20 @@ function renderTaskPanelByCats(allTasks, title, addCatId){
     if(!pending.length&&!sched.length&&!done.length) return;
 
     const _collapsed=collapsedCats.has(cid);
-    html+=`<div class="tp-cat-group">
-      <div class="tp-cat-group-hdr" style="cursor:pointer;"
-        ondragover="event.preventDefault();this.style.background='var(--accent-l)'"
-        ondragleave="this.style.background=''"
-        ondrop="this.style.background='';handleTaskPanelDrop(event,'${cid}')">
-        <span class="tp-cat-group-dot" style="background:${cat.bg}"></span>
+    html+=`<div class="tp-cat-group" data-catid="${cid}">
+      <div class="tp-cat-group-hdr" style="cursor:grab;user-select:none;"
+        draggable="true"
+        ondragstart="tpCatDragStart(event,'${cid}')"
+        ondragend="tpCatDragEnd(event)"
+        ondragover="tpCatDragOver(event,this,'${cid}')"
+        ondragleave="tpCatDragLeave(this)"
+        ondrop="tpCatDrop(event,this,'${cid}')">
+        <span class="tp-cat-group-dot" style="background:${cat.bg};cursor:pointer;" onclick="event.stopPropagation();openCatColorPicker('${cid}',event)" title="Mudar cor"></span>
         <span class="tp-cat-group-name" style="text-transform:lowercase;flex:1;" onclick="toggleCatGroup('${cid}',event)">${cat.name}</span>
-
+        <button onclick="event.stopPropagation();tpAddSubcat('${cid}')"
+          title="Nova subcategoria"
+          style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--g300);padding:0 4px;line-height:1;transition:color .1s;"
+          onmouseenter="this.style.color='var(--accent)'" onmouseleave="this.style.color='var(--g300)'">＋</button>
       </div>
       <div id="tcg-${cid}" style="display:${_collapsed?'none':'block'}">
       ${pending.map(t=>taskItemHTML(t)).join('')}
@@ -4054,28 +4061,8 @@ function renderTaskPanelForKey(key, filterCatId=null){
   let addCatId=null;
 
   if(map&&map.mode==='study'){
-    title='study';
-    ['historia','sociedade','noticias'].forEach(tabId=>{
-      const defs=CARD_DEFS_BY_TAB[tabId]||[];
-      defs.forEach(card=>{
-        card.tasks.forEach(t=>{
-          allTasks.push({
-            id:t.id, label:t.l||'', note:t.n||'',
-            catId:card.id, due:t.due||'', alarm:t.alarm||'',
-            time:t.time||'', duration:t.duration||'',
-            priority:t.priority||4, subtasks:t.subtasks||[],
-            _bg:card.iconBg, _color:card.color,
-          });
-        });
-      });
-    });
-    // Default add target: first card of historia (hist_outros)
-    addCatId='hist_outros';
-    allTasks=allTasks.map(t=>{
-      const card=Object.values(CARD_DEFS_BY_TAB).flat().find(c=>c.id===t.catId);
-      return{...t, bg:t._bg||(card?.iconBg||'#eee'), color:t._color||(card?.color||'#666')};
-    });
-    renderTaskPanelByCats(allTasks,'study',addCatId);
+    // Delegate to filterTasksBy so both paths use identical logic
+    filterTasksBy('study');
     return;
   }
   if(!map||map.mode==='task_tab'){
@@ -4083,6 +4070,11 @@ function renderTaskPanelForKey(key, filterCatId=null){
     renderTaskPanelForKey('nexus', filterCatId);
     return;
   } else if(map.mode==='checklist'){
+    // Delegate to filterTasksBy for consistent data (includes TASK_DATA)
+    if(CAT_TAB_MAP[key]){
+      filterTasksBy(key);
+      return;
+    }
     title=map.label.toLowerCase();
     addCatId=null;
     const defs=CARD_DEFS_BY_TAB[map.tabId]||[];
@@ -4449,28 +4441,8 @@ window.renderCal=function(){_origRenderCal();setTimeout(updateSidebarWidgets,50)
 function addSidebarTask(key){
   const map=SIDEBAR_MAP[key];
   if(map&&map.mode==='study'){
-    title='study';
-    ['historia','sociedade','noticias'].forEach(tabId=>{
-      const defs=CARD_DEFS_BY_TAB[tabId]||[];
-      defs.forEach(card=>{
-        card.tasks.forEach(t=>{
-          allTasks.push({
-            id:t.id, label:t.l||'', note:t.n||'',
-            catId:card.id, due:t.due||'', alarm:t.alarm||'',
-            time:t.time||'', duration:t.duration||'',
-            priority:t.priority||4, subtasks:t.subtasks||[],
-            _bg:card.iconBg, _color:card.color,
-          });
-        });
-      });
-    });
-    // Default add target: first card of historia (hist_outros)
-    addCatId='hist_outros';
-    allTasks=allTasks.map(t=>{
-      const card=Object.values(CARD_DEFS_BY_TAB).flat().find(c=>c.id===t.catId);
-      return{...t, bg:t._bg||(card?.iconBg||'#eee'), color:t._color||(card?.color||'#666')};
-    });
-    renderTaskPanelByCats(allTasks,'study',addCatId);
+    // Delegate to filterTasksBy so both paths use identical logic
+    filterTasksBy('study');
     return;
   }
   if(!map||map.mode==='task_tab'){openAddTask();return;}
@@ -4513,6 +4485,9 @@ function addSidebarTask(key){
 const CAT_TAB_MAP={
   nexus:['nexus'],
   study:['historia','sociedade','noticias'],
+  historia:['historia'],
+  sociedade:['sociedade'],
+  noticias:['noticias'],
   rotina:['rotina'],
 };
 
@@ -4540,7 +4515,7 @@ function filterTasksBy(catId){
     const tabCardIds=new Set(tabs.flatMap(tid=>(CARD_DEFS_BY_TAB[tid]||[]).map(c=>c.id)));
     tabCardIds.add(catId); // include top-level catId too
     const seenFromData=new Set(allTasks.map(t=>t.id));
-    [...TASK_DATA.semana,...TASK_DATA.mes].forEach(t=>{
+    [...TASK_DATA.semana,...TASK_DATA.mes,...(TASK_DATA.nexus||[])].forEach(t=>{
       if(seenFromData.has(t.id)) return; // already collected from CARD_DEFS
       if(tabCardIds.has(t.catId)||t.catId===catId) allTasks.push({
         id:t.id,label:t.label,note:t.note||'',catId:t.catId,
@@ -4558,7 +4533,7 @@ function filterTasksBy(catId){
         _bg:card.iconBg,_color:card.color
       }));
     });
-    [...TASK_DATA.semana,...TASK_DATA.mes].forEach(t=>{
+    [...TASK_DATA.semana,...TASK_DATA.mes,...(TASK_DATA.nexus||[])].forEach(t=>{
       if(t.catId===catId) allTasks.push({
         id:t.id,label:t.label,note:t.note||'',catId:t.catId,
         due:t.due||'',alarm:t.alarm||'',time:t.time||'',duration:t.duration||'',
@@ -4647,7 +4622,7 @@ function taskItemHTML(t,isDone=false,isScheduled=false){
   const cbStyle=p===1?'border-color:#f87171':p===2?'border-color:#fbbf24':'';
 
   return`<div class="task-item${d?' done-task':''}${sched&&!d?' scheduled':''}"
-      draggable="true" data-taskid="${t.id}" data-prio="${p}"
+      draggable="true" data-taskid="${t.id}" data-catid="${t.catId||''}" data-prio="${p}"
       data-bg="${cat.bg}" data-color="${cat.color}" data-label="${(t.label||'').replace(/"/g,'&quot;')}"
       ondragstart="tpDragStart(event,this)"
       ondragover="tpDragOver(event,this)"
@@ -4685,27 +4660,181 @@ function tpDragOver(e, el){
   el.style.borderTop='2px solid var(--accent,#7C6FCD)';
 }
 
+function tpFindTask(id){
+  // Returns {task, store, storeType} — storeType: 'flat'|'card', cardRef if card
+  for(const arr of [TASK_DATA.semana,TASK_DATA.mes,TASK_DATA.nexus]){
+    const t=arr.find(t=>t.id===id);
+    if(t) return {task:t, store:arr, storeType:'flat'};
+  }
+  for(const [tabId,cards] of Object.entries(CARD_DEFS_BY_TAB)){
+    for(const card of cards){
+      const t=(card.tasks||[]).find(t=>t.id===id);
+      if(t) return {task:t, store:card.tasks, storeType:'card', card, tabId};
+    }
+  }
+  return null;
+}
+
 function tpDrop(e, el){
   e.stopPropagation();
   el.style.borderTop='';
   if(!_tpDragId||_tpDragId===el.dataset.taskid) return;
   e.preventDefault();
-  const toId=el.dataset.taskid;
-  // Reorder in all data stores
-  const stores=[TASK_DATA.semana, TASK_DATA.mes, TASK_DATA.nexus,
-    ...Object.values(CARD_DEFS_BY_TAB).flatMap(defs=>defs.map(c=>c.tasks))];
-  stores.forEach(arr=>{
-    if(!Array.isArray(arr)) return;
-    const fromIdx=arr.findIndex(t=>(t.id||t.l)===_tpDragId||(t.id||t.l)===_tpDragId);
-    const toIdx  =arr.findIndex(t=>(t.id||t.l)===toId);
-    if(fromIdx>=0&&toIdx>=0&&fromIdx!==toIdx){
-      const [item]=arr.splice(fromIdx,1);
-      arr.splice(toIdx,0,item);
+
+  const toId    = el.dataset.taskid;
+  const toCatId = el.dataset.catid||'';
+  const fromInfo = tpFindTask(_tpDragId);
+  const toInfo   = tpFindTask(toId);
+  if(!fromInfo||!toInfo){ _tpDragId=null; return; }
+
+  // If same store: simple reorder
+  if(fromInfo.store===toInfo.store){
+    const arr=fromInfo.store;
+    const fi=arr.findIndex(t=>t.id===_tpDragId);
+    const ti=arr.findIndex(t=>t.id===toId);
+    if(fi>=0&&ti>=0&&fi!==ti){ const [m]=arr.splice(fi,1); arr.splice(ti,0,m); }
+  } else {
+    // Cross-store: remove from source, insert into target store before target task
+    const arr=fromInfo.store;
+    const fi=arr.findIndex(t=>t.id===_tpDragId);
+    if(fi<0){ _tpDragId=null; return; }
+    const [movedRaw]=arr.splice(fi,1);
+
+    const targetArr=toInfo.store;
+    const ti=targetArr.findIndex(t=>t.id===toId);
+
+    // Convert task format if crossing flat↔card stores
+    let moved=movedRaw;
+    if(fromInfo.storeType==='flat'&&toInfo.storeType==='card'){
+      // flat task → card task format: {l, n, id, due, priority...}
+      moved={id:moved.id,l:moved.label||moved.l||'',n:moved.note||moved.n||'',
+        due:moved.due||'',alarm:moved.alarm||'',time:moved.time||'',
+        priority:moved.priority||4,subtasks:moved.subtasks||[]};
+      moved.catId=toInfo.card.id;
+    } else if(fromInfo.storeType==='card'&&toInfo.storeType==='flat'){
+      // card task → flat task format: {label, note, catId, id...}
+      moved={id:moved.id,label:moved.l||moved.label||'',note:moved.n||moved.note||'',
+        catId:toInfo.task.catId||toCatId,
+        due:moved.due||'',alarm:moved.alarm||'',time:moved.time||'',
+        priority:moved.priority||4,subtasks:moved.subtasks||[]};
+    } else {
+      // card→card or flat→flat cross-store
+      if(fromInfo.storeType==='card') moved.catId=toInfo.card?.id||toCatId;
+      else moved.catId=toCatId;
     }
-  });
+
+    if(ti>=0) targetArr.splice(ti,0,moved);
+    else targetArr.push(moved);
+  }
+
   _tpDragId=null;
   renderTaskPanelForKey(currentSidebarKey);
   saveState();
+}
+
+// ── SUBCATEGORY (card) DRAG REORDER ─────────────────────────────────────────
+let _tpCatDragId=null;
+
+function tpCatDragStart(e, catId){
+  _tpCatDragId=catId;
+  e.dataTransfer.setData('text/plain','cat:'+catId);
+  e.dataTransfer.effectAllowed='move';
+  setTimeout(()=>{
+    const el=document.querySelector('.tp-cat-group[data-catid="'+catId+'"]');
+    if(el) el.style.opacity='.4';
+  },0);
+}
+
+function tpCatDragEnd(e){
+  document.querySelectorAll('.tp-cat-group').forEach(el=>{
+    el.style.opacity='';
+    el.style.borderTop='';
+  });
+  _tpCatDragId=null;
+}
+
+function tpCatDragOver(e, hdr, catId){
+  if(!_tpCatDragId||_tpCatDragId===catId) return;
+  e.preventDefault();
+  e.stopPropagation();
+  // Clear all indicators first
+  document.querySelectorAll('.tp-cat-group').forEach(el=>el.style.borderTop='');
+  const group=hdr.closest('.tp-cat-group');
+  if(group) group.style.borderTop='2px solid var(--accent,#7C6FCD)';
+}
+
+function tpCatDragLeave(hdr){
+  const group=hdr.closest('.tp-cat-group');
+  if(group) group.style.borderTop='';
+}
+
+function tpCatDrop(e, hdr, targetCatId){
+  e.preventDefault();
+  e.stopPropagation();
+  const group=hdr.closest('.tp-cat-group');
+  if(group) group.style.borderTop='';
+  if(!_tpCatDragId||_tpCatDragId===targetCatId) return;
+
+  // Find which CARD_DEFS_BY_TAB array contains both cards
+  for(const [tabId,cards] of Object.entries(CARD_DEFS_BY_TAB)){
+    const fi=cards.findIndex(c=>c.id===_tpCatDragId);
+    const ti=cards.findIndex(c=>c.id===targetCatId);
+    if(fi>=0&&ti>=0){
+      const [moved]=cards.splice(fi,1);
+      cards.splice(ti,0,moved);
+      break;
+    }
+  }
+  // Also reorder in CATEGORIES if both are there
+  const ci=CATEGORIES.findIndex(c=>c.id===_tpCatDragId);
+  const ct=CATEGORIES.findIndex(c=>c.id===targetCatId);
+  if(ci>=0&&ct>=0){
+    const [moved]=CATEGORIES.splice(ci,1);
+    CATEGORIES.splice(ct,0,moved);
+  }
+
+  _tpCatDragId=null;
+  renderTaskPanelForKey(currentSidebarKey);
+  saveState();
+}
+
+// ── CREATE SUBCATEGORY ────────────────────────────────────────────────────────
+function tpAddSubcat(parentCatId){
+  const name=prompt('Nome da nova subcategoria:');
+  if(!name||!name.trim()) return;
+
+  // Find which tab this catId belongs to
+  let targetTabId=null;
+  for(const [tabId,cards] of Object.entries(CARD_DEFS_BY_TAB)){
+    if(cards.some(c=>c.id===parentCatId)){ targetTabId=tabId; break; }
+  }
+  // If parentCatId is itself a tabId (top-level like 'nexus','rotina')
+  if(!targetTabId && CARD_DEFS_BY_TAB[parentCatId]) targetTabId=parentCatId;
+  if(!targetTabId){
+    // Try CAT_TAB_MAP
+    const tabs=CAT_TAB_MAP[parentCatId]||[];
+    if(tabs.length) targetTabId=tabs[0];
+  }
+  if(!targetTabId){ alert('Não foi possível determinar a aba de destino.'); return; }
+
+  const newId='sub_'+Date.now();
+  const emojiMatch=name.match(/^(\p{Emoji_Presentation}|\p{Extended_Pictographic})\s*/u);
+  const icon=emojiMatch?emojiMatch[0].trim():'';
+  const title=emojiMatch?name.slice(emojiMatch[0].length).trim()||name:name;
+
+  const newCard={id:newId, title, icon, iconBg:'#f0f0f0', color:'#555', tasks:[]};
+  const cards=CARD_DEFS_BY_TAB[targetTabId]||[];
+
+  // Insert after the parentCatId card if found, otherwise append
+  const parentIdx=cards.findIndex(c=>c.id===parentCatId);
+  if(parentIdx>=0) cards.splice(parentIdx+1,0,newCard);
+  else cards.push(newCard);
+
+  CARD_DEFS_BY_TAB[targetTabId]=cards;
+  renderTaskPanelForKey(currentSidebarKey);
+  saveState();
+  // Also re-render the checklist view if active
+  if(typeof renderChecklist==='function') renderChecklist(targetTabId,'cl-wrap-'+targetTabId);
 }
 
 function quickSetPriority(id, newPrio){
