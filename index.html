@@ -1575,7 +1575,7 @@ button, input, select, textarea { font-size: var(--fs) !important; }
         </div>
 
         <!-- Three columns: left | middle | right sidebar -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;align-items:start;margin-bottom:1.25rem;">
+        <div style="display:grid;grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr) minmax(0,.85fr);gap:1rem;align-items:start;margin-bottom:1.25rem;">
 
           <!-- LEFT COLUMN: water + vitamins -->
           <div id="nut-left-col" style="display:flex;flex-direction:column;gap:.625rem;">
@@ -1627,6 +1627,18 @@ button, input, select, textarea { font-size: var(--fs) !important; }
           <!-- RIGHT COLUMN: draggable vitals + treino -->
           <div id="nut-right-col" style="display:flex;flex-direction:column;gap:.625rem;">
 
+            <!-- Treino card — TOP, coloured background -->
+            <div class="nut-vcard" id="nvc-treino" draggable="true" data-nvc="treino"
+              style="background:linear-gradient(135deg,#EAE6F8,#F0EEF9);border:1px solid #D8D2F0;border-radius:13px;padding:.7rem .85rem;cursor:grab;">
+              <div class="nvc-handle">⠿</div>
+              <div class="nut-vcard-label" data-key="treino" style="color:#7C6FCD;">
+                <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="#7C6FCD" stroke-width="2" stroke-linecap="round" style="margin-right:4px;vertical-align:middle;"><path d="M4 10h2l2-6 4 12 2-6h2"/></svg>treino hoje
+              </div>
+              <div id="nut-treino-hoje" style="font-size:12px;color:#5A50B8;margin-bottom:6px;margin-top:5px;">—</div>
+              <div id="nut-treino-count" style="font-size:10px;color:#9B8FCC;margin-bottom:6px;"></div>
+              <div id="nut-treino-cal"></div>
+            </div>
+
             <!-- sono + peso side by side -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;" id="nvc-pair-sp">
               <div class="nut-vcard" id="nvc-sleep" draggable="true" data-nvc="sleep"
@@ -1662,18 +1674,6 @@ button, input, select, textarea { font-size: var(--fs) !important; }
                   style="flex:1;padding:4px 0;font-size:12px;font-weight:600;border:1.5px solid var(--g150);border-radius:7px;background:transparent;color:var(--g500);cursor:pointer;font-family:inherit;transition:all .15s;">3</button>
               </div>
               <input type="hidden" id="nut-e-ker" value=""/>
-            </div>
-
-            <!-- Treino card — coloured background -->
-            <div class="nut-vcard" id="nvc-treino" draggable="true" data-nvc="treino"
-              style="background:linear-gradient(135deg,#EAE6F8,#F0EEF9);border:1px solid #D8D2F0;border-radius:13px;padding:.7rem .85rem;cursor:grab;">
-              <div class="nvc-handle">⠿</div>
-              <div class="nut-vcard-label" data-key="treino" style="color:#7C6FCD;">
-                <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="#7C6FCD" stroke-width="2" stroke-linecap="round" style="margin-right:4px;vertical-align:middle;"><path d="M4 10h2l2-6 4 12 2-6h2"/></svg>treino hoje
-              </div>
-              <div id="nut-treino-hoje" style="font-size:12px;color:#5A50B8;margin-bottom:6px;margin-top:5px;">—</div>
-              <div id="nut-treino-count" style="font-size:10px;color:#9B8FCC;margin-bottom:8px;"></div>
-              <div id="nut-treino-cal" style="margin-top:2px;"></div>
             </div>
 
             <!-- Progress -->
@@ -3261,6 +3261,7 @@ function makeBlock(bd,di,si,span=2){
     // Make work block draggable
     b.draggable=true;
     b.addEventListener('dragstart',e=>{dragSrc={day:di,slot:si};setTimeout(()=>b.classList.add('dragging'),0);e.dataTransfer.effectAllowed='move';});
+    b.addEventListener('dragstart',()=>pushUndo());
     b.addEventListener('dragend',()=>{b.classList.remove('dragging');dragSrc=null;document.querySelectorAll('.drop-target').forEach(c=>c.classList.remove('drop-target'));});
     const rh=document.createElement('div');rh.className='block-resize';
     rh.style.zIndex='5';
@@ -3322,11 +3323,12 @@ function makeBlock(bd,di,si,span=2){
     // Botão deletar
     const acts=document.createElement('div');acts.className='bacts';
     const del=document.createElement('button');del.className='bact';del.innerHTML='&times;';
-    del.onclick=e=>{e.stopPropagation();const len=getBlockLen(di,si);for(let k=0;k<len;k++) calState[di][si+k]=null;renderCal();saveState();};
+    del.onclick=e=>{e.stopPropagation();pushUndo();const len=getBlockLen(di,si);for(let k=0;k<len;k++) calState[di][si+k]=null;renderCal();saveState();};
     acts.appendChild(del);b.appendChild(acts);
     // Drag do bloco
     b.draggable=true;
     b.addEventListener('dragstart',e=>{dragSrc={day:di,slot:si};setTimeout(()=>b.classList.add('dragging'),0);e.dataTransfer.effectAllowed='move';});
+    b.addEventListener('dragstart',()=>pushUndo());
     b.addEventListener('dragend',()=>{b.classList.remove('dragging');dragSrc=null;document.querySelectorAll('.drop-target').forEach(c=>c.classList.remove('drop-target'));});
     // Resize handle (bottom - expand)
     const rh=document.createElement('div');rh.className='block-resize';
@@ -6144,27 +6146,39 @@ const FONTS=[
   {name:'Courier', val:"'Courier New',monospace"},
 ];
 const THEMES=[
-  {name:'Claro',bg:'#ffffff',g50:'#F7F7F8',g100:'#EFEFEF',g800:'#1A1A1A',accent:'#4A90E2'},
-  {name:'Creme',bg:'#faf8f5',g50:'#f3f0eb',g100:'#e8e4de',g800:'#2a2218',accent:'#8B6A4A'},
-  {name:'Rosa',bg:'#fff8fb',g50:'#fdf0f5',g100:'#f5dde9',g800:'#3a1028',accent:'#cf6d9e'},
-  {name:'Escuro',bg:'#1a1a2e',g50:'#252540',g100:'#323250',g800:'#e8e8f8',accent:'#7c6fcd'},
-  {name:'Verde',bg:'#f4faf6',g50:'#e8f5ec',g100:'#d0ebd8',g800:'#142a1c',accent:'#2a7a4a'},
+  {name:'Fresh',   bg:'#FDFCFB',sbBg:'#FDFCFB',g50:'#F8F7F5',g100:'#EEECE8',g800:'#1C1A18',accent:'#7C6FCD',outerBg:'#EDEAE4'},
+  {name:'Lavanda', bg:'#F9F7FC',sbBg:'#F4F0F8',g50:'#EFE9F8',g100:'#E0D8F0',g800:'#2A1E40',accent:'#7C6FCD',outerBg:'#E5DFEF'},
+  {name:'Sage',    bg:'#F6FAF7',sbBg:'#EEF5F0',g50:'#E5F0E8',g100:'#D2E6D8',g800:'#1A2E20',accent:'#4A8A60',outerBg:'#DFF0E4'},
+  {name:'Peach',   bg:'#FDF8F5',sbBg:'#F8EDE5',g50:'#F5E6DA',g100:'#EDD6C4',g800:'#3A1E10',accent:'#C06A40',outerBg:'#EDE0D4'},
+  {name:'Blush',   bg:'#FDF7FA',sbBg:'#F8EEF4',g50:'#F3E2EE',g100:'#E8D0E4',g800:'#3A1028',accent:'#C05080',outerBg:'#EAD8E8'},
+  {name:'Slate',   bg:'#F5F7FA',sbBg:'#EDF0F5',g50:'#E5E8EF',g100:'#D4D8E4',g800:'#1A2030',accent:'#4A70A8',outerBg:'#DDE2EC'},
+  {name:'Dark',    bg:'#1C1A22',sbBg:'#161420',g50:'#26243C',g100:'#343258',g800:'#F0EEF8',accent:'#9B8FE8',outerBg:'#130F1C'},
+  {name:'Ink',     bg:'#1A1A18',sbBg:'#111110',g50:'#262624',g100:'#323230',g800:'#F5F4F2',accent:'#B8A870',outerBg:'#0E0E0C'},
 ];
 
 // Estado atual do design (editável no painel antes de aplicar)
 let dpState={};
 
 function dpDefaults(){
+  const cs=getComputedStyle(document.documentElement);
   return{
-    fontFamily: getComputedStyle(document.documentElement).getPropertyValue('--ff').trim(),
-    fontSize: parseInt(getComputedStyle(document.documentElement).getPropertyValue('--fs'))||14,
-    radius: parseInt(getComputedStyle(document.documentElement).getPropertyValue('--radius'))||10,
-    accent: '#4A90E2',
-    bg: '#ffffff',
-    g800: '#1A1A1A',
-    todayColor: '#cf6d9e',
-    sidebarBg: '#ffffff',
-    topbarHeight: 50,
+    fontFamily: cs.getPropertyValue('--ff').trim()||"'Schibsted Grotesk',sans-serif",
+    fontSize: parseInt(cs.getPropertyValue('--fs'))||13,
+    radius: parseInt(cs.getPropertyValue('--radius'))||11,
+    accent: '#7C6FCD',
+    bg: '#FDFCFB',
+    g800: '#1C1A18',
+    todayColor: '#7C6FCD',
+    sidebarBg: '#FDFCFB',
+    cardBg: '#FDFCFB',
+    outerBg: '#EDEAE4',
+    topbarHeight: 48,
+    sidebarW: 68,
+    tabStyle: 'list',
+    tabCols: 3,
+    tabBg: '#ffffff',
+    tabFontSize: 13,
+    tabCardRadius: 11,
   };
 }
 
@@ -6204,163 +6218,105 @@ function rgbToHex(rgb){
 
 function renderDpBody(){
   const body=document.getElementById('dp-body');
-  const fs=dpState.fontSize||14;
-  const rad=dpState.radius||10;
-  const curFont=dpState.fontFamily||FONTS[0].val;
-  const labels=dpState.labels||{};
-  const showHours=dpState.showHours!==false;
-  const tabStyle=dpState.tabStyle||'list';
-  const tabBg=dpState.tabBg||'#ffffff';
-  const tabCardRadius=dpState.tabCardRadius||12;
-  const tabFontSize=dpState.tabFontSize||13;
+  const d=dpState;
+  const fs=d.fontSize||13;
+  const rad=d.radius||11;
+  const curFont=d.fontFamily||FONTS[0].val;
+  const tabStyle=d.tabStyle||'list';
 
-  // Leitura de labels atuais do DOM
-  const curLogo=document.getElementById('sb-logo-txt')?.textContent||'rotina';
-  const curHello=document.getElementById('sb-hello')?.value||'hello, nasa 🤖';
-  const outerBg=dpState.outerBg||'#e8edf2';
+  const swatches=THEMES.map((t,i)=>`
+    <div onclick="applyTheme(${i})" title="${t.name}" style="cursor:pointer;text-align:center;flex-shrink:0;">
+      <div style="width:38px;height:38px;border-radius:10px;overflow:hidden;border:2px solid ${t.accent};margin-bottom:3px;display:grid;grid-template-columns:40% 60%;grid-template-rows:50% 50%;">
+        <div style="background:${t.sbBg};grid-row:1/3;"></div>
+        <div style="background:${t.bg};"></div>
+        <div style="background:${t.g100};"></div>
+      </div>
+      <div style="font-size:9px;color:var(--g400);white-space:nowrap;">${t.name}</div>
+    </div>`).join('');
+
+  const fontOpts=FONTS.map(f=>`<option value="${f.val}" ${curFont.includes(f.name.split(' ')[0])?'selected':''}>${f.name}</option>`).join('');
+
+  const catRows=CATEGORIES.map(c=>`
+    <div class="dp-row">
+      <div class="dp-label" style="display:flex;align-items:center;gap:5px;">
+        <div style="width:9px;height:9px;border-radius:50%;background:${c.bg};flex-shrink:0;border:1px solid ${c.color}"></div>
+        <span>${c.icon} ${c.name}</span>
+      </div>
+      <div class="dp-control" style="gap:4px;">
+        <div class="dp-color" title="Fundo"><input type="color" value="${c.bg}" oninput="updateCatColor('${c.id}','bg',this.value)"></div>
+        <div class="dp-color" title="Texto"><input type="color" value="${c.color||'#555'}" oninput="updateCatColor('${c.id}','color',this.value)"></div>
+        <span style="font-size:9px;color:var(--g300)">bg/txt</span>
+      </div>
+    </div>`).join('');
 
   body.innerHTML=`
-    <!-- PREVIEW -->
-    <div class="dp-preview" id="dp-preview" style="font-family:${curFont};font-size:${fs}px;border-radius:${rad}px;background:${dpState.bg||'#fff'}">
-      <span style="color:${dpState.g800||'#1a1a1a'}">${curLogo}</span>
-      <span style="color:${dpState.accent||'#4A90E2'}"> ✦ ${labels.nexus||'Nexus.doc'}</span>
-    </div>
-
     <!-- TEMAS -->
-    <div class="dp-section">Temas rápidos</div>
-    <div class="dp-swatch-row">
-      ${THEMES.map((t,i)=>`
-        <div title="${t.name}" onclick="applyTheme(${i})" style="cursor:pointer;text-align:center">
-          <div style="width:36px;height:36px;border-radius:8px;background:${t.bg};border:2px solid ${t.accent};overflow:hidden;margin-bottom:2px">
-            <div style="width:100%;height:50%;background:${t.accent}"></div>
-            <div style="width:60%;height:50%;background:${t.g100||'#eee'}"></div>
-          </div>
-          <div style="font-size:9px;color:var(--g500)">${t.name}</div>
-        </div>`).join('')}
-    </div>
+    <div class="dp-section" style="margin-top:0;">Temas</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">${swatches}</div>
+
+    <!-- CORES -->
+    <div class="dp-section">Cores</div>
+    <div class="dp-row"><div class="dp-label">Fundo geral</div>
+      <div class="dp-control"><div class="dp-color"><input type="color" id="dp-bg" value="${colorToHex(d.bg)||'#FDFCFB'}" oninput="dpPreview()"></div>
+      <span style="font-size:10px;color:var(--g400)" id="dp-bg-val">${colorToHex(d.bg)||'#FDFCFB'}</span></div></div>
+    <div class="dp-row"><div class="dp-label">Fundo sidebar</div>
+      <div class="dp-control"><div class="dp-color"><input type="color" id="dp-sidebar" value="${colorToHex(d.sidebarBg)||'#FDFCFB'}" oninput="dpPreview()"></div></div></div>
+    <div class="dp-row"><div class="dp-label">Fundo cards</div>
+      <div class="dp-control"><div class="dp-color"><input type="color" id="dp-card-bg" value="${colorToHex(d.cardBg)||'#ffffff'}" oninput="dpPreview()"></div></div></div>
+    <div class="dp-row"><div class="dp-label">Fundo externo</div>
+      <div class="dp-control"><div class="dp-color"><input type="color" id="dp-outer-bg" value="${colorToHex(d.outerBg)||'#EDEAE4'}" oninput="dpPreview()"></div></div></div>
+    <div class="dp-row"><div class="dp-label">Acento</div>
+      <div class="dp-control"><div class="dp-color"><input type="color" id="dp-accent" value="${d.accent||'#7C6FCD'}" oninput="dpPreview()"></div>
+      <span style="font-size:10px;color:var(--g400)" id="dp-accent-val">${d.accent||'#7C6FCD'}</span></div></div>
+    <div class="dp-row"><div class="dp-label">Texto principal</div>
+      <div class="dp-control"><div class="dp-color"><input type="color" id="dp-g800" value="${d.g800||'#1C1A18'}" oninput="dpPreview()"></div></div></div>
 
     <!-- TIPOGRAFIA -->
     <div class="dp-section">Tipografia</div>
+    <div class="dp-row"><div class="dp-label">Fonte</div>
+      <select class="dp-input" id="dp-font" onchange="dpPreview()" style="width:160px">${fontOpts}</select></div>
     <div class="dp-row">
-      <div class="dp-label">Fonte</div>
-      <select class="dp-input" id="dp-font" onchange="dpPreview()" style="width:160px">
-        ${FONTS.map(f=>`<option value="${f.val}" ${curFont.includes(f.name.split(' ')[0])?'selected':''}>${f.name}</option>`).join('')}
-      </select>
-    </div>
-    <div class="dp-row">
-      <div class="dp-label">Tamanho global <b id="dp-fs-val">${fs}px</b></div>
-      <input type="range" class="dp-range" id="dp-fs" min="11" max="18" value="${fs}"
-        oninput="document.getElementById('dp-fs-val').textContent=this.value+'px';dpPreview()">
-    </div>
-    <div class="dp-row">
-      <div class="dp-label">Arredondamento <b id="dp-rad-val">${rad}px</b></div>
-      <input type="range" class="dp-range" id="dp-rad" min="0" max="24" value="${rad}"
-        oninput="document.getElementById('dp-rad-val').textContent=this.value+'px';dpPreview()">
-    </div>
-
-    <!-- CORES GLOBAIS -->
-    <div class="dp-section">Cores globais</div>
-    <div class="dp-row"><div class="dp-label">Acento</div>
-      <div class="dp-control"><div class="dp-color"><input type="color" id="dp-accent" value="${dpState.accent||'#4A90E2'}" oninput="dpPreview()"></div>
-      <span id="dp-accent-val" style="font-size:10px;color:var(--g500)">${dpState.accent||'#4A90E2'}</span></div></div>
-    <div class="dp-row"><div class="dp-label">Dia atual</div>
-      <div class="dp-control"><div class="dp-color"><input type="color" id="dp-today" value="${dpState.todayColor||'#cf6d9e'}" oninput="dpPreview()"></div>
-      <span id="dp-today-val" style="font-size:10px;color:var(--g500)">${dpState.todayColor||'#cf6d9e'}</span></div></div>
-    <div class="dp-row"><div class="dp-label">Fundo externo (card)</div>
-      <div class="dp-color"><input type="color" id="dp-outer-bg" value="${dpState.outerBg||'#e8edf2'}" oninput="dpPreview()"></div></div>
-    <div class="dp-row"><div class="dp-label">Fundo geral</div>
-      <div class="dp-color"><input type="color" id="dp-bg" value="${colorToHex(dpState.bg)||'#ffffff'}" oninput="dpPreview()"></div></div>
-    <div class="dp-row"><div class="dp-label">Texto principal</div>
-      <div class="dp-color"><input type="color" id="dp-g800" value="${dpState.g800||'#1A1A1A'}" oninput="dpPreview()"></div></div>
-    <div class="dp-row"><div class="dp-label">Fundo sidebar</div>
-      <div class="dp-color"><input type="color" id="dp-sidebar" value="${colorToHex(dpState.sidebarBg)||'#ffffff'}" oninput="dpPreview()"></div></div>
+      <div class="dp-label">Tamanho <b id="dp-fs-val">${fs}px</b></div>
+      <input type="range" class="dp-range" id="dp-fs" min="11" max="16" value="${fs}"
+        oninput="document.getElementById('dp-fs-val').textContent=this.value+'px';dpPreview()"></div>
 
     <!-- LAYOUT -->
     <div class="dp-section">Layout</div>
     <div class="dp-row">
-      <div class="dp-label">Largura sidebar <b id="dp-sbw-val">${dpState.sidebarW||196}px</b></div>
-      <input type="range" class="dp-range" id="dp-sbw" min="140" max="280" value="${dpState.sidebarW||196}"
-        oninput="document.getElementById('dp-sbw-val').textContent=this.value+'px';dpPreview()">
-    </div>
+      <div class="dp-label">Arredondamento <b id="dp-rad-val">${rad}px</b></div>
+      <input type="range" class="dp-range" id="dp-rad" min="0" max="24" value="${rad}"
+        oninput="document.getElementById('dp-rad-val').textContent=this.value+'px';dpPreview()"></div>
     <div class="dp-row">
-      <div class="dp-label">Altura topbar <b id="dp-tbh-val">${dpState.topbarHeight||50}px</b></div>
-      <input type="range" class="dp-range" id="dp-tbh" min="36" max="72" value="${dpState.topbarHeight||50}"
-        oninput="document.getElementById('dp-tbh-val').textContent=this.value+'px';dpPreview()">
-    </div>
+      <div class="dp-label">Largura sidebar <b id="dp-sbw-val">${d.sidebarW||68}px</b></div>
+      <input type="range" class="dp-range" id="dp-sbw" min="48" max="240" value="${d.sidebarW||68}"
+        oninput="document.getElementById('dp-sbw-val').textContent=this.value+'px';dpPreview()"></div>
 
-    <!-- SIDEBAR — TEXTOS -->
-    <div class="dp-section">Sidebar — textos</div>
-    <div class="dp-row"><div class="dp-label">Título (logo)</div>
-      <input class="dp-input" id="dp-lbl-logo" value="${curLogo}" style="width:160px" placeholder="rotina"></div>
-    <div class="dp-row"><div class="dp-label">Saudação</div>
-      <input class="dp-input" id="dp-lbl-hello" value="${curHello}" style="width:160px"></div>
-    <div style="font-size:11px;color:var(--g400);margin-bottom:8px">Rótulos dos itens:</div>
-    ${['semana','nexus','historia','sociedade','noticias','rotina','prog'].map(k=>{
-      const lbl=document.querySelector(`.sb-item-lbl[data-key="${k}"]`)?.textContent||k;
-      return`<div class="dp-row" style="margin-bottom:6px">
-        <div class="dp-label" style="font-size:11px">${k}</div>
-        <input class="dp-input" id="dp-lbl-${k}" value="${lbl}" style="width:140px;font-size:11px">
-      </div>`;
-    }).join('')}
-
-    <!-- ABAS — ESTILO -->
-    <div class="dp-section">Abas (checklists) — estilo</div>
+    <!-- LISTAS (abas) -->
+    <div class="dp-section">Abas — estilo da lista</div>
     <div class="dp-row"><div class="dp-label">Fundo dos cards</div>
-      <div class="dp-color"><input type="color" id="dp-tab-bg" value="${tabBg}" oninput="dpPreviewTabs()"></div></div>
+      <div class="dp-color"><input type="color" id="dp-tab-bg" value="${colorToHex(d.tabBg)||'#ffffff'}" oninput="dpPreviewTabs()"></div></div>
     <div class="dp-row">
-      <div class="dp-label">Fonte nas abas <b id="dp-tabfs-val">${tabFontSize}px</b></div>
-      <input type="range" class="dp-range" id="dp-tab-fs" min="10" max="16" value="${tabFontSize}"
-        oninput="document.getElementById('dp-tabfs-val').textContent=this.value+'px';dpPreviewTabs()">
-    </div>
+      <div class="dp-label">Fonte <b id="dp-tabfs-val">${d.tabFontSize||13}px</b></div>
+      <input type="range" class="dp-range" id="dp-tab-fs" min="10" max="16" value="${d.tabFontSize||13}"
+        oninput="document.getElementById('dp-tabfs-val').textContent=this.value+'px';dpPreviewTabs()"></div>
     <div class="dp-row">
-      <div class="dp-label">Arredond. cards <b id="dp-tabrad-val">${tabCardRadius}px</b></div>
-      <input type="range" class="dp-range" id="dp-tab-rad" min="0" max="20" value="${tabCardRadius}"
-        oninput="document.getElementById('dp-tabrad-val').textContent=this.value+'px';dpPreviewTabs()">
-    </div>
-    <div class="dp-row"><div class="dp-label">Estilo da lista</div>
-      <div class="dp-control" style="gap:4px">
-        <button class="dp-font-btn${tabStyle==='list'?' active':''}" onclick="dpSetTabStyle('list',this)">Lista</button>
+      <div class="dp-label">Arredond. <b id="dp-tabrad-val">${d.tabCardRadius||11}px</b></div>
+      <input type="range" class="dp-range" id="dp-tab-rad" min="0" max="20" value="${d.tabCardRadius||11}"
+        oninput="document.getElementById('dp-tabrad-val').textContent=this.value+'px';dpPreviewTabs()"></div>
+    <div class="dp-row"><div class="dp-label">Densidade</div>
+      <div class="dp-control" style="gap:4px;">
         <button class="dp-font-btn${tabStyle==='compact'?' active':''}" onclick="dpSetTabStyle('compact',this)">Compacto</button>
-        <button class="dp-font-btn${tabStyle==='airy'?' active':''}" onclick="dpSetTabStyle('airy',this)">Espaçado</button>
-      </div>
-    </div>
-    <div class="dp-row"><div class="dp-label">Grid colunas</div>
-      <div class="dp-control" style="gap:4px">
-        ${[1,2,3].map(n=>`<button class="dp-font-btn${(dpState.tabCols||3)===n?' active':''}" onclick="dpSetTabCols(${n},this)">${n} col</button>`).join('')}
-      </div>
-    </div>
+        <button class="dp-font-btn${tabStyle==='list'?' active':''}"    onclick="dpSetTabStyle('list',this)">Normal</button>
+        <button class="dp-font-btn${tabStyle==='airy'?' active':''}"    onclick="dpSetTabStyle('airy',this)">Espaçado</button>
+      </div></div>
+    <div class="dp-row"><div class="dp-label">Colunas</div>
+      <div class="dp-control" style="gap:4px;">
+        ${[1,2,3].map(n=>`<button class="dp-font-btn${(d.tabCols||3)===n?' active':''}" onclick="dpSetTabCols(${n},this)">${n}</button>`).join('')}
+      </div></div>
 
-    <!-- CORES DAS CATEGORIAS -->
-    <div class="dp-section">Cores das categorias</div>
-    ${CATEGORIES.map(c=>`
-      <div class="dp-row">
-        <div class="dp-label" style="display:flex;align-items:center;gap:5px;max-width:110px;overflow:hidden">
-          <div style="width:9px;height:9px;border-radius:50%;background:${c.bg};flex-shrink:0"></div>
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.icon} ${c.name}</span>
-        </div>
-        <div class="dp-control" style="gap:3px">
-          <div class="dp-color" title="Fundo"><input type="color" value="${c.bg}"
-            oninput="updateCatColor('${c.id}','bg',this.value)"></div>
-          <div class="dp-color" title="Fonte"><input type="color" value="${c.color==='#ffffff'?'#ffffff':c.color}"
-            oninput="updateCatColor('${c.id}','color',this.value)"></div>
-          <span style="font-size:9px;color:var(--g300)">bg / font</span>
-        </div>
-      </div>`).join('')}
-    <!-- Cores dos cards das abas -->
-    ${Object.values(CARD_DEFS_BY_TAB).flat().map(card=>`
-      <div class="dp-row">
-        <div class="dp-label" style="display:flex;align-items:center;gap:5px;max-width:110px;overflow:hidden">
-          <div style="width:9px;height:9px;border-radius:50%;background:${card.iconBg};flex-shrink:0"></div>
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${card.icon} ${card.title}</span>
-        </div>
-        <div class="dp-control" style="gap:3px">
-          <div class="dp-color" title="Fundo do card"><input type="color" value="${card.iconBg}"
-            oninput="updateCardColor('${card.id}','iconBg',this.value)"></div>
-          <div class="dp-color" title="Texto"><input type="color" value="${card.color}"
-            oninput="updateCardColor('${card.id}','color',this.value)"></div>
-          <span style="font-size:9px;color:var(--g300)">bg / txt</span>
-        </div>
-      </div>`).join('')}
+    <!-- CATEGORIAS -->
+    <div class="dp-section">Categorias</div>
+    ${catRows}
   `;
 }
 
@@ -6371,47 +6327,61 @@ function colorToHex(c){
 }
 
 function dpPreview(){
-  // Preview ao vivo enquanto mexe
-  const font=document.getElementById('dp-font')?.value||dpState.fontFamily;
-  const fs=document.getElementById('dp-fs')?.value||dpState.fontSize;
-  const rad=document.getElementById('dp-rad')?.value||dpState.radius;
-  const outerBg=document.getElementById('dp-outer-bg')?.value||dpState.outerBg||'#e8edf2';
-  const accent=document.getElementById('dp-accent')?.value||dpState.accent;
-  const today=document.getElementById('dp-today')?.value||dpState.todayColor;
-  const bg=document.getElementById('dp-bg')?.value||'#ffffff';
-  const g800=document.getElementById('dp-g800')?.value||'#1A1A1A';
-  const sbw=document.getElementById('dp-sbw')?.value;
-  const tbh=document.getElementById('dp-tbh')?.value;
+  const g=id=>document.getElementById(id)?.value;
+  const font   = g('dp-font')    || dpState.fontFamily;
+  const fs     = g('dp-fs')      || dpState.fontSize;
+  const rad    = g('dp-rad')     || dpState.radius;
+  const outerBg= g('dp-outer-bg')|| dpState.outerBg || '#EDEAE4';
+  const accent = g('dp-accent')  || dpState.accent   || '#7C6FCD';
+  const bg     = g('dp-bg')      || dpState.bg       || '#FDFCFB';
+  const g800   = g('dp-g800')    || dpState.g800     || '#1C1A18';
+  const sbBg   = g('dp-sidebar') || dpState.sidebarBg|| bg;
+  const cardBg = g('dp-card-bg') || dpState.cardBg   || bg;
+  const sbw    = g('dp-sbw');
 
-  // Atualizar labels ao vivo
-  const av=document.getElementById('dp-accent-val');if(av)av.textContent=accent;
-  const tv=document.getElementById('dp-today-val');if(tv)tv.textContent=today;
+  // Update val displays
+  const av=document.getElementById('dp-accent-val'); if(av) av.textContent=accent;
+  const bv=document.getElementById('dp-bg-val');     if(bv) bv.textContent=bg;
 
-  // Preview box
-  const prev=document.getElementById('dp-preview');
-  if(prev){prev.style.fontFamily=font;prev.style.fontSize=fs+'px';prev.style.borderRadius=rad+'px';prev.style.background=bg;}
-
-  // Aplicar ao vivo (temporário)
+  // Apply live to CSS vars
   const root=document.documentElement;
-  root.style.setProperty('--ff',font);
-  root.style.setProperty('--fs',fs+'px');
+  root.style.setProperty('--ff',    font);
+  root.style.setProperty('--fs',    fs+'px');
   root.style.setProperty('--radius',rad+'px');
   root.style.setProperty('--accent',accent);
-  root.style.setProperty('--g800',g800);
-  root.style.setProperty('--card-outer-bg',outerBg);
-  document.querySelectorAll('.day-num.today').forEach(el=>el.style.color=today);
-  document.querySelectorAll('.sidebar').forEach(el=>el.style.background=bg);
-  document.body.style.background=outerBg;
-  if(sbw) document.querySelectorAll('.sidebar').forEach(el=>el.style.width=sbw+'px');
-  if(tbh) document.querySelectorAll('.topbar').forEach(el=>el.style.height=tbh+'px');
+  root.style.setProperty('--sb-accent',accent);
+  root.style.setProperty('--g800',  g800);
+  root.style.setProperty('--white', bg);
+  root.style.setProperty('--card-outer-bg', outerBg);
+  document.body.style.background = outerBg;
+
+  // Sidebar bg
+  document.querySelectorAll('.sidebar').forEach(el=>el.style.background=sbBg);
+  if(sbw){
+    document.querySelectorAll('.sidebar').forEach(el=>el.style.width=sbw+'px');
+    document.documentElement.style.setProperty('--sb-w',sbw+'px');
+  }
+
+  // Card backgrounds via dynamic CSS
+  let styleEl=document.getElementById('dp-dynamic-css');
+  if(!styleEl){styleEl=document.createElement('style');styleEl.id='dp-dynamic-css';document.head.appendChild(styleEl);}
+  styleEl.textContent=`.nut-card,.nut-vcard:not(#nvc-treino):not(#nvc-nexus){background:${cardBg}!important;} .app-card{background:${bg}!important;}`;
 }
 
 function applyTheme(i){
   const t=THEMES[i];
-  document.getElementById('dp-bg').value=t.bg;
-  document.getElementById('dp-accent').value=t.accent;
-  document.getElementById('dp-g800').value=t.g800;
-  document.getElementById('dp-sidebar').value=t.bg;
+  const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.value=v; };
+  set('dp-bg',     t.bg);
+  set('dp-accent', t.accent);
+  set('dp-g800',   t.g800||'#1C1A18');
+  set('dp-sidebar',t.sbBg||t.bg);
+  set('dp-card-bg',t.bg);
+  set('dp-outer-bg',t.outerBg||'#EDEAE4');
+  // update g50/g100 directly in CSS
+  const root=document.documentElement;
+  root.style.setProperty('--g50',  t.g50||'#F8F7F5');
+  root.style.setProperty('--g100', t.g100||'#EEECE8');
+  root.style.setProperty('--white',t.bg);
   dpPreview();
 }
 
@@ -6435,18 +6405,15 @@ function updateCardColor(cardId, prop, val){
 
 function dpSetTabStyle(style, btn){
   dpState.tabStyle=style;
-  document.querySelectorAll('.dp-font-btn').forEach(b=>{
-    if(['Lista','Compacto','Espaçado'].includes(b.textContent)) b.classList.remove('active');
-  });
+  // Only deactivate sibling buttons in the same row
+  btn.closest('.dp-control')?.querySelectorAll('.dp-font-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   dpPreviewTabs();
 }
 
 function dpSetTabCols(n, btn){
   dpState.tabCols=n;
-  document.querySelectorAll('.dp-font-btn').forEach(b=>{
-    if(['1 col','2 col','3 col'].includes(b.textContent)) b.classList.remove('active');
-  });
+  btn.closest('.dp-control')?.querySelectorAll('.dp-font-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   dpPreviewTabs();
 }
@@ -6476,44 +6443,27 @@ function dpPreviewTabs(){
 }
 
 function applyDesign(){
-  const font=document.getElementById('dp-font')?.value;
-  const fs=document.getElementById('dp-fs')?.value;
-  const rad=document.getElementById('dp-rad')?.value;
-  const accent=document.getElementById('dp-accent')?.value;
-  const today=document.getElementById('dp-today')?.value;
-  const bg=document.getElementById('dp-bg')?.value;
-  const g800=document.getElementById('dp-g800')?.value;
-  const sidebarBg=document.getElementById('dp-sidebar')?.value;
-  const sbw=document.getElementById('dp-sbw')?.value;
-  const tbh=document.getElementById('dp-tbh')?.value;
-  const tabBg=document.getElementById('dp-tab-bg')?.value;
-  const tabFs=document.getElementById('dp-tab-fs')?.value;
-  const tabRad=document.getElementById('dp-tab-rad')?.value;
-  const showHours=document.getElementById('dp-show-hours')?.checked;
-  const outerBg=document.getElementById('dp-outer-bg')?.value||'#e8edf2';
-
-  // Labels sidebar
-  const labels={};
-  ['semana','nexus','historia','sociedade','noticias','rotina','prog'].forEach(k=>{
-    const v=document.getElementById('dp-lbl-'+k)?.value;
-    if(v) labels[k]=v;
-  });
-  const lblLogo=document.getElementById('dp-lbl-logo')?.value;
-  const lblHello=document.getElementById('dp-lbl-hello')?.value;
-
+  const g=id=>document.getElementById(id)?.value;
   const design={
-    fontFamily:font, fontSize:parseInt(fs), radius:parseInt(rad),
-    accent, todayColor:today, bg, g800, sidebarBg, outerBg,
-    sidebarW:parseInt(sbw), topbarHeight:parseInt(tbh),
-    tabBg, tabFontSize:parseInt(tabFs), tabCardRadius:parseInt(tabRad),
-    tabStyle:dpState.tabStyle, tabCols:dpState.tabCols,
-    showHours:true, labels,
-    lblLogo, lblHello,
+    fontFamily: g('dp-font'),
+    fontSize:   parseInt(g('dp-fs')),
+    radius:     parseInt(g('dp-rad')),
+    accent:     g('dp-accent'),
+    bg:         g('dp-bg'),
+    g800:       g('dp-g800'),
+    sidebarBg:  g('dp-sidebar'),
+    cardBg:     g('dp-card-bg'),
+    outerBg:    g('dp-outer-bg'),
+    sidebarW:   parseInt(g('dp-sbw')),
+    tabBg:      g('dp-tab-bg'),
+    tabFontSize:parseInt(g('dp-tab-fs')),
+    tabCardRadius:parseInt(g('dp-tab-rad')),
+    tabStyle:   dpState.tabStyle,
+    tabCols:    dpState.tabCols,
   };
-
-  Object.assign(dpState,design);
+  Object.assign(dpState, design);
   applyDesignToDOM(design);
-  localStorage.setItem(LS+'design',JSON.stringify(design));
+  localStorage.setItem(LS+'design', JSON.stringify(design));
   saveState();
   closeDesignPanel();
 }
@@ -6521,47 +6471,40 @@ function applyDesign(){
 function applyDesignToDOM(d){
   if(!d) return;
   const root=document.documentElement;
-  if(d.fontFamily) root.style.setProperty('--ff',d.fontFamily);
-  if(d.fontSize)   root.style.setProperty('--fs',d.fontSize+'px');
-  if(d.radius)     root.style.setProperty('--radius',d.radius+'px');
-  if(d.accent)     root.style.setProperty('--accent',d.accent);
-  if(d.g800)       root.style.setProperty('--g800',d.g800);
-  if(d.outerBg)    root.style.setProperty('--card-outer-bg',d.outerBg);
+  if(d.fontFamily) root.style.setProperty('--ff',     d.fontFamily);
+  if(d.fontSize)   root.style.setProperty('--fs',     d.fontSize+'px');
+  if(d.radius)     root.style.setProperty('--radius', d.radius+'px');
+  if(d.accent){    root.style.setProperty('--accent', d.accent);
+                   root.style.setProperty('--sb-accent', d.accent); }
+  if(d.g800)       root.style.setProperty('--g800',   d.g800);
+  if(d.bg)         root.style.setProperty('--white',  d.bg);
+  if(d.outerBg)    root.style.setProperty('--card-outer-bg', d.outerBg);
 
   if(d.outerBg) document.body.style.background=d.outerBg;
   if(d.sidebarBg) document.querySelectorAll('.sidebar').forEach(el=>el.style.background=d.sidebarBg);
-  if(d.sidebarW)  document.querySelectorAll('.sidebar').forEach(el=>el.style.width=d.sidebarW+'px');
-  if(d.topbarHeight) document.querySelectorAll('.topbar').forEach(el=>el.style.height=d.topbarHeight+'px');
+  if(d.sidebarW){
+    document.querySelectorAll('.sidebar').forEach(el=>el.style.width=d.sidebarW+'px');
+    document.documentElement.style.setProperty('--sb-w', d.sidebarW+'px');
+  }
 
-  // Injetar CSS dinâmico para today + abas
+  // Injetar CSS dinâmico
   let styleEl=document.getElementById('dp-dynamic-css');
   if(!styleEl){styleEl=document.createElement('style');styleEl.id='dp-dynamic-css';document.head.appendChild(styleEl);}
   let css='';
-  if(d.todayColor) css+=`.day-num.today{color:${d.todayColor}!important;font-weight:700;}\n`;
-  if(d.tabBg)      css+=`.cl-card{background:${d.tabBg}!important;}\n`;
+  if(d.accent)        css+=`.tab.active{border-bottom-color:${d.accent}!important;}.sb-nav-item.active{color:${d.accent}!important;background:${d.accent}18!important;}\n`;
+  if(d.cardBg)        css+=`.nut-card,.cl-card,.task-panel,.app-card{background:${d.cardBg}!important;}\n`;
+  else if(d.bg)       css+=`.app-card{background:${d.bg}!important;}\n`;
+  if(d.tabBg)         css+=`.cl-card{background:${d.tabBg}!important;}\n`;
   if(d.tabCardRadius) css+=`.cl-card{border-radius:${d.tabCardRadius}px!important;}\n`;
   if(d.tabFontSize){
     css+=`.cl-item-text,.cl-item{font-size:${d.tabFontSize}px!important;}\n`;
     css+=`.cl-title{font-size:${Math.min(d.tabFontSize+1,16)}px!important;}\n`;
   }
-  if(d.tabStyle==='compact') css+=`.cl-item{padding:4px 14px!important;}\n`;
+  if(d.tabStyle==='compact') css+=`.cl-item{padding:3px 12px!important;min-height:0!important;}\n`;
   else if(d.tabStyle==='airy') css+=`.cl-item{padding:12px 18px!important;}\n`;
+  else css+=`.cl-item{padding:7px 16px!important;}\n`;
   if(d.tabCols) css+=`.cl-wrap{grid-template-columns:repeat(${d.tabCols},1fr)!important;}\n`;
   styleEl.textContent=css;
-
-  // Labels da sidebar
-  if(d.lblLogo){const el=document.getElementById('sb-logo-txt');if(el)el.textContent=d.lblLogo;}
-  if(d.lblHello){const el=document.getElementById('sb-hello');if(el)el.value=d.lblHello;}
-  if(d.labels){
-    Object.entries(d.labels).forEach(([k,v])=>{
-      const el=document.querySelector(`.sb-item-lbl[data-key="${k}"]`);
-      if(el) el.textContent=v;
-    });
-  }
-
-  // Visibilidade do widget de horas
-  const hw=document.getElementById('sb-widget-hours');
-  if(hw) hw.style.display=d.showHours===false?'none':'block';
 }
 
 function resetDesign(){
@@ -6579,6 +6522,56 @@ function resetDesign(){
 }
 
 // Design salvo é aplicado no init abaixo
+
+// ── UNDO STACK ───────────────────────────────────────────────────────────────
+const _undoStack = [];
+const MAX_UNDO = 30;
+
+function calSnapshot(){
+  // Deep clone just calState (the calendar grid)
+  return JSON.parse(JSON.stringify(calState));
+}
+
+function pushUndo(){
+  _undoStack.push(calSnapshot());
+  if(_undoStack.length > MAX_UNDO) _undoStack.shift();
+}
+
+function calUndo(){
+  if(!_undoStack.length){ showSyncStatus('idle'); return; }
+  const prev=_undoStack.pop();
+  for(let d=0;d<7;d++) calState[d]=prev[d]||{};
+  renderCal();
+  saveState();
+}
+
+// ── CLIPBOARD ────────────────────────────────────────────────────────────────
+let _calClipboard = null; // {slots:[{offset,bd}...], len}
+
+function calCopyBlock(di, si){
+  const bd=calState[di][si];
+  if(!bd) return;
+  const len=getBlockLen(di,si);
+  const slots=[];
+  for(let k=0;k<len;k++) slots.push({offset:k, bd:{...calState[di][si+k]}});
+  _calClipboard={slots,len,srcDi:di,srcSi:si};
+  // Visual feedback
+  const status=document.getElementById('sync-status')||document.getElementById('nut-sync-indicator');
+  if(status){ const prev=status.textContent; status.textContent='📋 copiado'; setTimeout(()=>status.textContent=prev,1500); }
+}
+
+function calPasteBlock(di, si){
+  if(!_calClipboard) return;
+  pushUndo();
+  const {slots,len}=_calClipboard;
+  // Check if space available
+  if(si+len > TOTAL_SLOTS) return;
+  for(let k=0;k<len;k++){
+    if(k<slots.length) calState[di][si+k]={...slots[k].bd};
+    else calState[di][si+k]=null;
+  }
+  renderCal(); saveState();
+}
 
 function saveState(){
   try{
@@ -6925,17 +6918,51 @@ window.saveState = function(){
 };
 
 
+// ── CALENDAR KEYBOARD SHORTCUTS ──────────────────────────────────────────────
+let _calFocusSlot = null; // {di, si} — last right-clicked/focused slot
+
+document.addEventListener('keydown', e=>{
+  // Only when calendar view is active
+  const calView = document.getElementById('view-cal');
+  if(!calView || !calView.classList.contains('active')) return;
+  // Don't intercept when typing in an input
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.isContentEditable) return;
+
+  if((e.ctrlKey||e.metaKey) && e.key==='z'){
+    e.preventDefault();
+    calUndo();
+    return;
+  }
+  if((e.ctrlKey||e.metaKey) && e.key==='c'){
+    e.preventDefault();
+    if(_calFocusSlot){
+      const {di,si}=_calFocusSlot;
+      if(calState[di]&&calState[di][si]) calCopyBlock(di,si);
+    }
+    return;
+  }
+  if((e.ctrlKey||e.metaKey) && e.key==='v'){
+    e.preventDefault();
+    if(_calFocusSlot){
+      const {di,si}=_calFocusSlot;
+      calPasteBlock(di,si);
+    }
+    return;
+  }
+});
+
 // ── CALENDAR CONTEXT MENU ──
 function showCalContextMenu(e, di, si, bd){
   e.preventDefault();
   e.stopPropagation();
   document.getElementById('cal-ctx-menu')?.remove();
+  _calFocusSlot={di,si}; // track for keyboard shortcuts
 
   const menu=document.createElement('div');
   menu.id='cal-ctx-menu';
   menu.className='cal-ctx-menu';
   menu.style.left=Math.min(e.clientX,window.innerWidth-180)+'px';
-  menu.style.top=Math.min(e.clientY,window.innerHeight-220)+'px';
+  menu.style.top=Math.min(e.clientY,window.innerHeight-260)+'px';
 
   const colorLabel=document.createElement('div');
   colorLabel.style.cssText='font-size:10px;color:var(--g400);padding:4px 14px 2px;';
@@ -6971,7 +6998,24 @@ function showCalContextMenu(e, di, si, bd){
   inp.title='Cor personalizada';
   inp.oninput=()=>{
     const len=getBlockLen(di,si);
-    for(let k=0;k<len;k++) if(calState[di][si+k]) calState[di][si+k].bg=inp.value;
+    const origBd=calState[di][si];
+    const origBg=origBd?.bg;
+    const origLabel=origBd?.label;
+    const origTaskId=origBd?.taskId;
+    const newBg=inp.value;
+    for(let k=0;k<len;k++) if(calState[di][si+k]) calState[di][si+k].bg=newBg;
+    // Propagate
+    for(let d=0;d<7;d++){
+      Object.keys(calState[d]).forEach(s=>{
+        const slot=calState[d][parseInt(s)];
+        if(!slot||slot.fixed) return;
+        const sameTask=origTaskId&&slot.taskId===origTaskId;
+        const sameLabel=slot.label===origLabel&&slot.bg===origBg;
+        if((sameTask||sameLabel)&&!(d===di&&parseInt(s)>=si&&parseInt(s)<si+len)){
+          slot.bg=newBg;
+        }
+      });
+    }
     renderCal();saveState();
   };
   colorRow.appendChild(inp);
@@ -6980,6 +7024,31 @@ function showCalContextMenu(e, di, si, bd){
   const sep=document.createElement('div');
   sep.style.cssText='height:1px;background:var(--g100);margin:4px 0;';
   menu.appendChild(sep);
+
+  const copyItem=document.createElement('div');
+  copyItem.className='cal-ctx-item';
+  copyItem.innerHTML='<span>📋</span><span>Copiar bloco  <kbd style="font-size:9px;opacity:.6">Ctrl+C</kbd></span>';
+  copyItem.onclick=()=>{ calCopyBlock(di,si); menu.remove(); };
+  menu.appendChild(copyItem);
+
+  if(_calClipboard){
+    const pasteItem=document.createElement('div');
+    pasteItem.className='cal-ctx-item';
+    pasteItem.innerHTML='<span>📌</span><span>Colar aqui</span>';
+    pasteItem.onclick=()=>{ calPasteBlock(di,si); menu.remove(); };
+    menu.appendChild(pasteItem);
+  }
+
+  const undoItem=document.createElement('div');
+  undoItem.className='cal-ctx-item';
+  undoItem.style.opacity=_undoStack.length?'1':'.4';
+  undoItem.innerHTML='<span>↩</span><span>Desfazer  <kbd style="font-size:9px;opacity:.6">Ctrl+Z</kbd></span>';
+  undoItem.onclick=()=>{ if(_undoStack.length){calUndo();menu.remove();} };
+  menu.appendChild(undoItem);
+
+  const sep2=document.createElement('div');
+  sep2.style.cssText='height:1px;background:var(--g100);margin:4px 0;';
+  menu.appendChild(sep2);
 
   const hideItem=document.createElement('div');
   hideItem.className='cal-ctx-item';
@@ -7000,6 +7069,7 @@ function showEmptySlotContextMenu(e, di, si){
   e.preventDefault();
   e.stopPropagation();
   document.getElementById('cal-ctx-menu')?.remove();
+  _calFocusSlot={di,si};
 
   const menu=document.createElement('div');
   menu.id='cal-ctx-menu';
@@ -7007,6 +7077,26 @@ function showEmptySlotContextMenu(e, di, si){
   menu.style.left=Math.min(e.clientX,window.innerWidth-180)+'px';
   menu.style.top=Math.min(e.clientY,window.innerHeight-150)+'px';
 
+  if(_calClipboard){
+    const pasteItem=document.createElement('div');
+    pasteItem.className='cal-ctx-item';
+    pasteItem.innerHTML='<span>📌</span><span>Colar aqui  <kbd style="font-size:9px;opacity:.6">Ctrl+V</kbd></span>';
+    pasteItem.onclick=()=>{ calPasteBlock(di,si); menu.remove(); };
+    menu.appendChild(pasteItem);
+    const sep3=document.createElement('div');
+    sep3.style.cssText='height:1px;background:var(--g100);margin:4px 0;';
+    menu.appendChild(sep3);
+  }
+  if(_undoStack.length){
+    const undoItem2=document.createElement('div');
+    undoItem2.className='cal-ctx-item';
+    undoItem2.innerHTML='<span>↩</span><span>Desfazer</span>';
+    undoItem2.onclick=()=>{ calUndo();menu.remove(); };
+    menu.appendChild(undoItem2);
+    const sep4=document.createElement('div');
+    sep4.style.cssText='height:1px;background:var(--g100);margin:4px 0;';
+    menu.appendChild(sep4);
+  }
   const hideItem=document.createElement('div');
   hideItem.className='cal-ctx-item';
   hideItem.innerHTML='<span>🙈</span><span>Ocultar este slot</span>';
@@ -7860,38 +7950,129 @@ function nutToggleTreinoDate(dateStr){
   if(nutState.sheetsUrl) pushToSheets({...day,data:day.date}).catch(()=>{});
 }
 
+// Calendar state — which month is displayed
+let _treinoCalYear = new Date().getFullYear();
+let _treinoCalMonth = new Date().getMonth();
+
+function nutTreinoCalNav(delta){
+  _treinoCalMonth += delta;
+  if(_treinoCalMonth > 11){ _treinoCalMonth=0; _treinoCalYear++; }
+  if(_treinoCalMonth < 0){ _treinoCalMonth=11; _treinoCalYear--; }
+  nutRenderTreinoMiniCal();
+}
+
+function nutGetTreinoMonthDatesFor(year, month){
+  const ym=year+'-'+String(month+1).padStart(2,'0');
+  return nutState.days.filter(d=>{
+    if(!d.date.startsWith(ym)) return false;
+    const ex=String(d.ex||'').trim();
+    return ex && ex!=='0' && ex!=='rest';
+  });
+}
+
 function nutRenderTreinoMiniCal(){
   const calEl=document.getElementById('nut-treino-cal');
   if(!calEl) return;
+  const year=_treinoCalYear, month=_treinoCalMonth;
   const now=new Date();
-  const year=now.getFullYear(), month=now.getMonth();
   const firstDay=new Date(year,month,1);
   const daysInMonth=new Date(year,month+1,0).getDate();
-  const startDow=firstDay.getDay()===0?6:firstDay.getDay()-1; // Mon=0
-  const trainingDates=new Set(nutGetTreinoMonthDates());
+  const startDow=firstDay.getDay()===0?6:firstDay.getDay()-1;
+  const trainedDays=nutGetTreinoMonthDatesFor(year,month);
+  const trainingMap={}; // date -> ex string
+  trainedDays.forEach(d=>{ trainingMap[d.date]=String(d.ex||''); });
   const todayStr=nutTodayKey();
   const dayNames=['S','T','Q','Q','S','S','D'];
+  const monthName=new Date(year,month,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  const isCurrentMonth=(year===now.getFullYear()&&month===now.getMonth());
 
-  let cal='<div style="font-size:9px;font-weight:700;color:#9B8FCC;letter-spacing:.04em;text-transform:uppercase;margin-bottom:5px;">'+
-    now.toLocaleDateString('pt-BR',{month:'long'})+'</div>';
+  let cal='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">'+
+    '<button onclick="nutTreinoCalNav(-1)" style="background:none;border:none;cursor:pointer;color:#9B8FCC;font-size:13px;padding:0 2px;line-height:1;">‹</button>'+
+    '<span style="font-size:9px;font-weight:700;color:#9B8FCC;letter-spacing:.04em;text-transform:uppercase;">'+monthName+'</span>'+
+    '<button onclick="nutTreinoCalNav(1)" style="background:none;border:none;cursor:'+(isCurrentMonth?'default':'pointer')+';color:'+(isCurrentMonth?'#D8D2F0':'#9B8FCC')+';font-size:13px;padding:0 2px;line-height:1;">›</button>'+
+  '</div>';
+
   cal+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;">';
-  dayNames.forEach(d=>{ cal+='<div style="text-align:center;font-size:8px;color:#C0AACF;font-weight:600;padding:1px 0;">'+d+'</div>'; });
-  // empty cells
+  dayNames.forEach(d=>{ cal+='<div style="text-align:center;font-size:7px;color:#C0AACF;font-weight:600;padding:1px 0;">'+d+'</div>'; });
   for(let i=0;i<startDow;i++) cal+='<div></div>';
   for(let d=1;d<=daysInMonth;d++){
     const dateStr=year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    const isTrained=trainingDates.has(dateStr);
+    const exVal=trainingMap[dateStr]||'';
+    const isTrained=!!exVal;
     const isToday=dateStr===todayStr;
     const isFuture=dateStr>todayStr;
-    cal+='<div onclick="'+(isFuture?'':"nutToggleTreinoDate('"+dateStr+"')")+'"'+
-      ' style="text-align:center;font-size:9px;border-radius:4px;padding:2px 1px;'+
+    // Short label for training type
+    const shortLabel=isTrained?(exVal.match(/^([A-Z]\d)/i)||['',''])[1]||'✓':'';
+    const title=isTrained?exVal:'';
+    cal+='<div '+(isFuture?'':('data-tdate="'+dateStr+'" onclick="nutCalDayClickTreino(event,this.dataset.tdate)"'))+
+      (title?' title="'+title+'"':'')+
+      ' style="text-align:center;font-size:8px;border-radius:4px;padding:2px 1px;'+
       'cursor:'+(isFuture?'default':'pointer')+';'+
       'background:'+(isTrained?'#9B8FCC':(isToday?'#EAE6F8':'transparent'))+';'+
       'color:'+(isTrained?'#fff':(isToday?'#7C6FCD':(isFuture?'#D8D2F0':'#9B8FCC')))+';'+
-      'font-weight:'+(isTrained||isToday?'700':'400')+';">'+d+'</div>';
+      'font-weight:'+(isTrained||isToday?'700':'400')+';line-height:1.6;">'+
+      (isTrained&&shortLabel?shortLabel:d)+'</div>';
   }
   cal+='</div>';
   calEl.innerHTML=cal;
+}
+
+function nutCalDayClickTreino(event, dateStr){
+  event && event.stopPropagation();
+  // If already trained → toggle off
+  let day=nutState.days.find(d=>d.date===dateStr);
+  const hasTreino=day&&String(day.ex||'').trim()&&day.ex!=='0'&&day.ex!=='rest';
+  if(hasTreino){
+    // Clear
+    day.ex=''; nutPersist();
+    nutRenderTreinoWidget();
+    if(nutState.sheetsUrl) pushToSheets({...day,data:day.date}).catch(()=>{});
+    return;
+  }
+  // Show type picker inline near the clicked cell
+  nutShowTreinoTypePicker(event.currentTarget||event.target, dateStr);
+}
+
+function nutShowTreinoTypePicker(anchorEl, dateStr){
+  // Remove any existing picker
+  document.getElementById('treino-type-picker')?.remove();
+  const allTypes=[...NUT_TREINO_SEQUENCE,'cardio','rest','outro'];
+  const picker=document.createElement('div');
+  picker.id='treino-type-picker';
+  picker.style.cssText='position:fixed;z-index:300;background:var(--white);border:1px solid #D8D2F0;border-radius:12px;'+
+    'padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.15);display:flex;flex-direction:column;gap:3px;min-width:140px;';
+  allTypes.forEach(t=>{
+    const btn=document.createElement('button');
+    btn.textContent=NUT_TREINO_LABELS[t]||t;
+    btn.style.cssText='background:none;border:none;cursor:pointer;font-family:inherit;font-size:12px;'+
+      'text-align:left;padding:5px 8px;border-radius:7px;color:var(--g700);transition:background .1s;';
+    btn.onmouseenter=()=>btn.style.background='#EAE6F8';
+    btn.onmouseleave=()=>btn.style.background='none';
+    btn.onclick=()=>{ nutSaveTreinoForDate(dateStr,t); picker.remove(); };
+    picker.appendChild(btn);
+  });
+  // Position
+  const rect=anchorEl.getBoundingClientRect();
+  picker.style.top=(rect.bottom+4)+'px';
+  picker.style.left=Math.max(8,rect.left-50)+'px';
+  document.body.appendChild(picker);
+  setTimeout(()=>document.addEventListener('click',()=>picker.remove(),{once:true}),10);
+}
+
+function nutSaveTreinoForDate(dateStr, exType){
+  let day=nutState.days.find(d=>d.date===dateStr);
+  if(!day){
+    day={date:dateStr,prot:0,carbs:0,fat:0,fib:0,cal:0,deficit:0,water:0,sleep:0,ker:0,
+      ex:'',kg:0,poly:0,nourkrin:0,vitaD:0,ferro:0,creatina:0,minoxidil:0,magnesio:0,foods:'',notes:''};
+    nutState.days.push(day);
+    nutState.days.sort((a,b)=>a.date.localeCompare(b.date));
+  }
+  day.ex=exType;
+  // If today, also update nutState.exToday
+  if(dateStr===nutTodayKey()) nutState.exToday=exType;
+  nutPersist();
+  nutRenderTreinoWidget();
+  if(nutState.sheetsUrl) pushToSheets({...day,data:day.date}).catch(()=>{});
 }
 
 function nutRenderTreinoWidget(){
@@ -7901,20 +8082,16 @@ function nutRenderTreinoWidget(){
   const day=nutState.days.find(d=>d.date===today);
   const savedEx=(day&&day.ex&&String(day.ex).trim()&&day.ex!=='0'&&day.ex!=='rest')?day.ex:null;
 
-  if(savedEx){
-    const label=NUT_TREINO_LABELS[savedEx]||savedEx;
-    el.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;">'+
-      '<span style="font-size:13px;font-weight:600;color:#5A50B8;">'+label+'</span>'+
-      '<span style="font-size:10px;color:#C0AACF;cursor:pointer;" onclick="nutClearTreino()" title="limpar">✕</span>'+
-    '</div>';
-  } else {
-    const {name}=nutGetNextTreino();
-    const label=NUT_TREINO_LABELS[name]||name;
-    el.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">'+
-      '<span style="font-size:12px;color:#9B8FCC;">'+label+'</span>'+
-       '<button onclick="nutConfirmPendingTreino()" style="font-size:11px;font-weight:600;padding:3px 10px;background:#7C6FCD;color:#fff;border:none;border-radius:20px;cursor:pointer;font-family:inherit;white-space:nowrap;">confirmar ✓</button>'+
-    '</div>';
-  }
+  const allTypes=[...NUT_TREINO_SEQUENCE,'cardio','rest'];
+  const typeOpts=allTypes.map(t=>`<option value="${t}" ${savedEx===t?'selected':''}>${NUT_TREINO_LABELS[t]||t}</option>`).join('');
+  const noOpt=savedEx?'':'<option value="" disabled selected>escolher…</option>';
+
+  el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+    <select onchange="nutSelectTreinoType(this.value)" style="flex:1;font-size:12px;font-weight:600;color:#5A50B8;background:rgba(255,255,255,.6);border:1px solid #D8D2F0;border-radius:8px;padding:4px 6px;font-family:inherit;outline:none;cursor:pointer;appearance:auto;">
+      ${noOpt}${typeOpts}
+    </select>
+    ${savedEx?`<span onclick="nutClearTreino()" title="limpar" style="font-size:10px;color:#C0AACF;cursor:pointer;flex-shrink:0;">✕</span>`:''}
+  </div>`;
 
   // Year count
   const countEl=document.getElementById('nut-treino-count');
@@ -7930,6 +8107,11 @@ function nutRenderTreinoWidget(){
 
   // Mini calendar
   nutRenderTreinoMiniCal();
+}
+
+function nutSelectTreinoType(val){
+  if(!val) return;
+  nutSaveTreinoForDate(nutTodayKey(), val);
 }
 
 function nutClearTreino(){
