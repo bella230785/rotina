@@ -1047,6 +1047,11 @@ iframe.embed{flex:1;border:none;width:100%;height:100%;}
   min-height:0;
 }
 .td-rich-editor:empty::before{content:attr(data-placeholder);color:var(--g300);pointer-events:none;}
+.td-img-wrap{position:relative;display:inline-block;margin:4px 0;}
+.td-img-resize-bar{position:absolute;top:4px;right:4px;display:flex;gap:3px;background:rgba(0,0,0,.5);border-radius:6px;padding:3px 5px;opacity:0;transition:opacity .15s;}
+.td-img-wrap:hover .td-img-resize-bar{opacity:1;}
+.td-img-resize-btn{background:none;border:none;color:#fff;font-size:10px;font-weight:700;cursor:pointer;padding:1px 4px;border-radius:3px;font-family:inherit;transition:background .1s;}
+.td-img-resize-btn:hover{background:rgba(255,255,255,.25);}
 .td-rich-editor hr{border:none;border-top:1px solid var(--g150);margin:10px 0;}
 .td-rich-editor input[type=checkbox]{margin-right:6px;cursor:pointer;accent-color:var(--accent);}
 
@@ -1114,11 +1119,13 @@ iframe.embed{flex:1;border:none;width:100%;height:100%;}
   -webkit-font-smoothing: antialiased;
 }
 /* Highlight no editor */
-#ov-editor mark, .td-note-editor mark {
+#ov-editor mark, .td-note-editor mark, #td-note-rich mark, .td-rich-editor mark {
   background-color: #43b8cf4f !important;
   border-radius: 4px !important;
   padding: 0 0.1em !important;
 }
+/* Override browser default yellow mark */
+mark { background-color: #43b8cf4f; color: inherit; }
 /* Quote blocks */
 #ov-editor blockquote, .td-note-editor blockquote {
   background-color: #a5a0a026 !important;
@@ -1355,25 +1362,38 @@ button, input, select, textarea { font-size: var(--fs) !important; }
 
   <div class="sb-pill">
 
-    <!-- icon 1: vídeo → nexus tasks -->
+    <!-- nexus -->
     <button class="sb-nav-item" id="sb-nav-nexus" data-tip="nexus" onclick="sbOpenTasks('nexus',this)">
       <span class="sb-nav-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="12" height="10" rx="2"/><path d="M14 8l4-2v8l-4-2V8z"/></svg></span>
       <span class="sb-nav-label">nexus</span>
     </button>
-
-    <!-- icon 2: calendário → semana tasks -->
-    <button class="sb-nav-item" id="sb-nav-cal" data-tip="rotina" onclick="sbOpenTasks('rotina',this)">
-      <span class="sb-nav-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="16" height="14" rx="2"/><path d="M2 8h16M6 2v4M14 2v4"/><circle cx="7" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="10" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="13" cy="12" r="1" fill="currentColor" stroke="none"/></svg></span>
-      <span class="sb-nav-label">semana</span>
+    <!-- rotina -->
+    <button class="sb-nav-item" id="sb-nav-rotina" data-tip="rotina" onclick="sbOpenTasks('rotina',this)">
+      <span class="sb-nav-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 2"/></svg></span>
+      <span class="sb-nav-label">rotina</span>
     </button>
-
-    <!-- icon 4: texto → study tasks -->
+    <!-- study -->
     <button class="sb-nav-item" id="sb-nav-study" data-tip="study" onclick="sbOpenTasks('study',this)">
       <span class="sb-nav-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h12a1 1 0 011 1v11a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M7 7h6M7 10h4M7 13h5"/></svg></span>
       <span class="sb-nav-label">study</span>
     </button>
+    <!-- casa -->
+    <button class="sb-nav-item" id="sb-nav-casa" data-tip="casa" onclick="sbOpenTasks('casa',this)">
+      <span class="sb-nav-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l7-6 7 6v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9z"/><path d="M8 18V12h4v6"/></svg></span>
+      <span class="sb-nav-label">casa</span>
+    </button>
+    <!-- weekend -->
+    <button class="sb-nav-item" id="sb-nav-weekend" data-tip="weekend" onclick="sbOpenTasks('weekend',this)">
+      <span class="sb-nav-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3a4 4 0 014 4c0 3-4 10-4 10S6 10 6 7a4 4 0 014-4z"/><circle cx="10" cy="7" r="1.5" fill="currentColor" stroke="none"/></svg></span>
+      <span class="sb-nav-label">weekend</span>
+    </button>
+    <!-- dash -->
+    <button class="sb-nav-item" id="sb-nav-dash" data-tip="dash" onclick="sbOpenTasks('dash',this)">
+      <span class="sb-nav-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></span>
+      <span class="sb-nav-label">dash</span>
+    </button>
 
-    <!-- nutrição (sem separador, no pill) -->
+    <!-- daily (view switch) -->
     <button class="sb-nav-item active" id="sb-nav-nutricao" data-tip="daily"
       onclick="switchViewFromSb('nutricao',this)">
       <span class="sb-nav-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3C7 3 4 5.5 4 9c0 4 3 7 6 8 3-1 6-4 6-8 0-3.5-3-6-6-6z"/><path d="M10 3v14M7 6.5c1 .5 2 .5 3 0M7 10c1 .5 2 .5 3 0"/></svg></span>
@@ -1382,8 +1402,8 @@ button, input, select, textarea { font-size: var(--fs) !important; }
 
     <div class="sb-sep" style="margin:6px 0;width:100%;"></div>
 
-    <!-- dynamic categories -->
-    <div id="sb-dyn-cats" style="width:100%;display:flex;flex-direction:column;gap:2px;align-items:inherit;"></div>
+    <!-- dynamic categories (hidden — managed via manage categories modal) -->
+    <div id="sb-dyn-cats" style="display:none;"></div>
 
     <div class="sb-sep" style="margin:6px 0;width:100%;"></div>
 
@@ -2079,6 +2099,15 @@ const CARD_DEFS_BY_TAB={
     {id:'brasil',icon:'🇧🇷',iconBg:'#fdebd0',title:'Brasil',color:'#7A4A10',tasks:[]},
     {id:'not_outros',icon:'',iconBg:'#eeeeee',title:'outros',color:'#707070',tasks:[]},
     {id:'not_sem_cat',icon:'',iconBg:'#f5f5f5',title:'sem categoria',color:'#999',tasks:[]},
+  ],
+  casa:[
+    {id:'casa_sem_cat',icon:'',iconBg:'#f5f5f5',title:'sem categoria',color:'#999',tasks:[]},
+  ],
+  weekend:[
+    {id:'weekend_sem_cat',icon:'',iconBg:'#f5f5f5',title:'sem categoria',color:'#999',tasks:[]},
+  ],
+  dash:[
+    {id:'dash_sem_cat',icon:'',iconBg:'#f5f5f5',title:'sem categoria',color:'#999',tasks:[]},
   ],
 };
 
@@ -3679,8 +3708,11 @@ const FONT_COLORS=['#ffffff','#1A1A1A','#3D3580','#1A4A7A','#8B2035','#45818e','
 const CAT_ICON_POOL=['📁','🎯','💡','🔖','🌿','⚡','🎨','📌','🔥','🧩','🌊','🦋','🎬','📝','🗂','🏆','🌸','🔑','💎','🎵'];
 let CATEGORIES=[
   {id:'nexus',  name:'nexus',  icon:'', bg:'#e8e4f0', color:'#5a4a7a'},
-  {id:'study',  name:'study',  icon:'', bg:'#e4eee8', color:'#3a5a4a'},
   {id:'rotina', name:'rotina', icon:'', bg:'#e8e8e8', color:'#555555'},
+  {id:'study',  name:'study',  icon:'', bg:'#e4eee8', color:'#3a5a4a'},
+  {id:'casa',   name:'casa',   icon:'', bg:'#f0f0f0', color:'#555'},
+  {id:'weekend',name:'weekend',icon:'', bg:'#fce8b2', color:'#7A5500'},
+  {id:'dash',   name:'dash',   icon:'', bg:'#e0e8f8', color:'#1A3A7A'},
 ];
 
 // ── TASK PANEL ──
@@ -3860,6 +3892,9 @@ const SIDEBAR_MAP={
   noticias:{mode:'checklist', tabId:'noticias',  label:'Notícias',  icon:'📰', bg:'#cfe2f3', color:'#1A4A7A'},
   rotina:  {mode:'checklist', tabId:'rotina',    label:'The Brain', icon:'🧠', bg:'#cccccc', color:'#8b8a8a'},
   study:   {mode:'study'},
+  casa:    {mode:'checklist', tabId:'casa',    label:'Casa',    icon:'🏠', bg:'#f0f0f0', color:'#555'},
+  weekend: {mode:'checklist', tabId:'weekend', label:'Weekend', icon:'🌴', bg:'#fce8b2', color:'#7A5500'},
+  dash:    {mode:'checklist', tabId:'dash',    label:'Dash',    icon:'⚡', bg:'#e0e8f8', color:'#1A3A7A'},
 };
 
 let currentSidebarKey='semana';
@@ -4489,6 +4524,9 @@ const CAT_TAB_MAP={
   sociedade:['sociedade'],
   noticias:['noticias'],
   rotina:['rotina'],
+  casa:['casa'],
+  weekend:['weekend'],
+  dash:['dash'],
 };
 
 function filterTasksBy(catId){
@@ -4636,7 +4674,7 @@ function taskItemHTML(t,isDone=false,isScheduled=false){
     </div>
     <div class="task-item-actions">
       <button class="task-action-btn task-star-btn${p===1?' task-star-lit':''}" onclick="event.stopPropagation();quickSetPriority('${t.id}',${p===1?3:1})" title="${p===1?'Remover prioridade':'Marcar como prioritária'}" style="opacity:${p===1?'1':'.35'};font-size:13px;"${p===1?' style="opacity:1;font-size:13px;"':''}>⭐</button>
-      <button class="task-action-btn" onclick="event.stopPropagation();openTaskDetail('${t.id}')" title="Abrir detalhe">↗</button>
+      <button class="task-action-btn" onclick="event.stopPropagation();openTaskDetailExpanded('${t.id}')" title="Abrir expandido">↗</button>
       <button class="task-action-btn del" onclick="event.stopPropagation();deleteTask('${t.id}',event)" title="Apagar">✕</button>
     </div>
   </div>`;
@@ -4728,7 +4766,8 @@ function tpDrop(e, el){
   }
 
   _tpDragId=null;
-  renderTaskPanelForKey(currentSidebarKey);
+  const _snapKey=currentSidebarKey; // snapshot before any re-render changes it
+  renderTaskPanelForKey(_snapKey);
   saveState();
 }
 
@@ -4794,7 +4833,8 @@ function tpCatDrop(e, hdr, targetCatId){
   }
 
   _tpCatDragId=null;
-  renderTaskPanelForKey(currentSidebarKey);
+  const _snap=currentSidebarKey;
+  renderTaskPanelForKey(_snap);
   saveState();
 }
 
@@ -4805,35 +4845,45 @@ function tpAddSubcat(parentCatId){
 
   // Find which tab this catId belongs to
   let targetTabId=null;
-  for(const [tabId,cards] of Object.entries(CARD_DEFS_BY_TAB)){
-    if(cards.some(c=>c.id===parentCatId)){ targetTabId=tabId; break; }
-  }
-  // If parentCatId is itself a tabId (top-level like 'nexus','rotina')
-  if(!targetTabId && CARD_DEFS_BY_TAB[parentCatId]) targetTabId=parentCatId;
+  // parentCatId may itself be a tabId
+  if(CARD_DEFS_BY_TAB[parentCatId]) targetTabId=parentCatId;
   if(!targetTabId){
-    // Try CAT_TAB_MAP
+    for(const [tabId,cards] of Object.entries(CARD_DEFS_BY_TAB)){
+      if(cards.some(c=>c.id===parentCatId)){ targetTabId=tabId; break; }
+    }
+  }
+  if(!targetTabId){
     const tabs=CAT_TAB_MAP[parentCatId]||[];
     if(tabs.length) targetTabId=tabs[0];
   }
-  if(!targetTabId){ alert('Não foi possível determinar a aba de destino.'); return; }
+  if(!targetTabId){ alert('Não foi possível determinar a aba.'); return; }
 
   const newId='sub_'+Date.now();
-  const emojiMatch=name.match(/^(\p{Emoji_Presentation}|\p{Extended_Pictographic})\s*/u);
-  const icon=emojiMatch?emojiMatch[0].trim():'';
-  const title=emojiMatch?name.slice(emojiMatch[0].length).trim()||name:name;
+  // Simple emoji detection (first char)
+  const firstChar=[...name.trim()][0]||'';
+  const isEmoji=firstChar.length>=1&&!/[a-zA-Z0-9À-ž]/.test(firstChar);
+  const icon=isEmoji?firstChar:'';
+  const title=isEmoji?name.trim().slice(firstChar.length).trim()||name.trim():name.trim();
 
-  const newCard={id:newId, title, icon, iconBg:'#f0f0f0', color:'#555', tasks:[]};
-  const cards=CARD_DEFS_BY_TAB[targetTabId]||[];
+  // Pick a soft bg color based on position
+  const palettes=['#f0edf8','#e8f4ec','#fdf3e8','#e8f0f8','#fce8f0','#f0f8e8'];
+  const idx=Object.values(CARD_DEFS_BY_TAB).flat().length%palettes.length;
+  const newCard={id:newId, title, icon, iconBg:palettes[idx], color:'#444', tasks:[]};
 
-  // Insert after the parentCatId card if found, otherwise append
+  if(!CARD_DEFS_BY_TAB[targetTabId]) CARD_DEFS_BY_TAB[targetTabId]=[];
+  const cards=CARD_DEFS_BY_TAB[targetTabId];
+
+  // Insert after the parentCatId card if possible, else append
   const parentIdx=cards.findIndex(c=>c.id===parentCatId);
   if(parentIdx>=0) cards.splice(parentIdx+1,0,newCard);
   else cards.push(newCard);
 
-  CARD_DEFS_BY_TAB[targetTabId]=cards;
-  renderTaskPanelForKey(currentSidebarKey);
+  // Register in CAT_TAB_MAP so filterTasksBy can find it
+  if(!CAT_TAB_MAP[targetTabId]) CAT_TAB_MAP[targetTabId]=[targetTabId];
+
+  const snapKey=currentSidebarKey;
+  renderTaskPanelForKey(snapKey);
   saveState();
-  // Also re-render the checklist view if active
   if(typeof renderChecklist==='function') renderChecklist(targetTabId,'cl-wrap-'+targetTabId);
 }
 
@@ -5122,6 +5172,12 @@ function openTaskDetail(id){
     starBtn.style.filter=isPrio?'drop-shadow(0 0 4px #f59e0b)':'none';
   }
 
+  // Init image paste handler on rich editor (once)
+  const _rn=document.getElementById('td-note-rich');
+  if(_rn && !_rn._imgPasteInited){
+    initRichEditorImagePaste(_rn);
+    _rn._imgPasteInited=true;
+  }
   // Abrir painel
   document.getElementById('td-overlay').classList.add('open');
   const tdPanel=document.getElementById('td-panel');
@@ -5130,6 +5186,15 @@ function openTaskDetail(id){
   setTimeout(()=>titleEl.focus(),200);
 }
 
+
+function openTaskDetailExpanded(id){
+  // Open normal panel first (populates fields), then immediately expand
+  openTaskDetail(id);
+  // Use timeout to let panel open before expanding
+  setTimeout(()=>{
+    if(!detailExpanded) toggleDetailExpand();
+  }, 60);
+}
 
 // ── TASK DETAIL RICH EDITOR ──
 let detailExpanded=false;
@@ -5209,13 +5274,69 @@ function toggleDetailExpand(){
       editor.style.cssText='flex:1;padding:16px 28px;outline:none;font-family:inherit;font-size:13px;line-height:1.8;color:var(--g800);overflow-y:auto;min-height:0;';
       editor.innerHTML=richContent;
       editor.oninput=()=>ovSave();
+      // Fix font size jumping: intercept Enter keys
+      editor.addEventListener('keydown', e=>{
+        if(e.key==='Enter'){
+          e.preventDefault();
+          if(e.shiftKey){
+            // Shift+Enter: soft break
+            document.execCommand('insertHTML', false, '<br>');
+          } else {
+            // Enter: new paragraph preserving font size
+            const sel=window.getSelection();
+            if(sel&&sel.rangeCount){
+              const range=sel.getRangeAt(0);
+              range.deleteContents();
+              const p=document.createElement('p');
+              p.style.cssText='margin:0 0 .85em 0;font-size:13px;';
+              const br=document.createElement('br');
+              p.appendChild(br);
+              range.insertNode(p);
+              range.setStart(p,0);
+              range.setEnd(p,0);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
+          }
+        }
+      });
       // Handle paste: preserve formatting
       editor.addEventListener('paste',e=>{
+        // Check for image first
+        const items=[...(e.clipboardData?.items||[])];
+        const imgItem=items.find(i=>i.type.startsWith('image/'));
+        if(imgItem){
+          e.preventDefault();
+          const blob=imgItem.getAsFile();
+          if(!blob) return;
+          const reader=new FileReader();
+          reader.onload=ev=>{
+            const src=ev.target.result;
+            const wrap=document.createElement('div');
+            wrap.className='td-img-wrap';
+            const img=document.createElement('img');
+            img.src=src; img.style.cssText='max-width:100%;height:auto;border-radius:6px;display:block;';
+            const bar=document.createElement('div');
+            bar.className='td-img-resize-bar';
+            bar.innerHTML='<button class="td-img-resize-btn" onclick="tdImgResize(this,\'100%\')">■</button>'+
+              '<button class="td-img-resize-btn" onclick="tdImgResize(this,\'55%\')">◧</button>'+
+              '<button class="td-img-resize-btn" onclick="tdImgResize(this,\'30%\')">▪</button>';
+            wrap.appendChild(img); wrap.appendChild(bar);
+            const sel=window.getSelection();
+            if(sel&&sel.rangeCount){
+              const range=sel.getRangeAt(0);
+              range.deleteContents(); range.insertNode(wrap);
+              range.setStartAfter(wrap); sel.removeAllRanges(); sel.addRange(range);
+            } else { editor.appendChild(wrap); }
+            editor.dispatchEvent(new Event('input',{bubbles:true}));
+          };
+          reader.readAsDataURL(blob);
+          return;
+        }
         e.preventDefault();
         const html_paste=e.clipboardData.getData('text/html');
         const text_paste=e.clipboardData.getData('text/plain');
         if(html_paste){
-          // Clean and insert HTML paste
           const clean=cleanPastedHTML(html_paste);
           document.execCommand('insertHTML',false,clean);
         } else if(text_paste){
@@ -7535,7 +7656,17 @@ function tdHighlight(){
   if(!ed) return; ed.focus();
   const sel=window.getSelection();
   if(!sel||sel.isCollapsed) return;
-  document.execCommand('insertHTML',false,'<mark style="background:#43b8cf4f;border-radius:3px;padding:0 2px;">'+sel.toString()+'</mark>');
+  const range=sel.getRangeAt(0);
+  // Remove existing mark if any
+  const anc=range.commonAncestorContainer;
+  const existingMark=anc.nodeType===1?anc.closest('mark'):(anc.parentElement?.closest('mark'));
+  if(existingMark){ existingMark.replaceWith(...existingMark.childNodes); return; }
+  const mark=document.createElement('mark');
+  mark.style.cssText='background:#43b8cf4f;border-radius:3px;padding:0 2px;';
+  try{ range.surroundContents(mark); }
+  catch(e){
+    document.execCommand('insertHTML',false,'<mark style="background:#43b8cf4f;border-radius:3px;padding:0 2px;">'+range.toString()+'</mark>');
+  }
 }
 function tdQuote(){
   const ed=document.getElementById('td-note-rich')||document.getElementById('td-rich-editor');
