@@ -5188,12 +5188,25 @@ function openTaskDetail(id){
 
 
 function openTaskDetailExpanded(id){
-  // Open normal panel first (populates fields), then immediately expand
+  // Populate fields via openTaskDetail, then expand synchronously
+  // First ensure detailExpanded is false so openTaskDetail doesn't conflict
+  if(detailExpanded){
+    // Already expanded: just switch task
+    openTaskDetail(id);
+    // Refresh expanded content
+    const richNote=document.getElementById('td-note-rich');
+    const ov=document.getElementById('ov-editor');
+    if(ov && richNote) ov.innerHTML=richNote.innerHTML;
+    const t=getAllTask(id)||{};
+    const titleEls=document.querySelector('#td-expand-overlay div[style*="font-size:20px"]');
+    if(titleEls) titleEls.textContent=t.label||'';
+    return;
+  }
   openTaskDetail(id);
-  // Use timeout to let panel open before expanding
-  setTimeout(()=>{
+  // Expand after DOM settles
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
     if(!detailExpanded) toggleDetailExpand();
-  }, 60);
+  }));
 }
 
 // ── TASK DETAIL RICH EDITOR ──
@@ -5215,9 +5228,9 @@ function toggleDetailExpand(){
     if(tdOverlay) tdOverlay.classList.remove('open');
     const t=getAllTask(currentDetailId)||{};
     const cat=getCat(t.catId||'');
-    const noteContent=textarea?.value||'';
-    // If content has HTML tags use directly, else convert plain text
-    const richContent=noteContent.includes('<')?noteContent:plainToRich(noteContent);
+    // Read from the rich editor (contenteditable), not the hidden textarea
+    const richNote=document.getElementById('td-note-rich');
+    const richContent=richNote?.innerHTML||'';
     if(overlay){
       overlay.innerHTML='';
       overlay.style.display='flex';
@@ -5354,10 +5367,11 @@ function toggleDetailExpand(){
       saveDetailField('note',rich);
     }
     if(overlay){ overlay.style.display='none'; overlay.innerHTML=''; }
-    // Restore floating panel (NO td-overlay re-activation to avoid blocking UI)
+    // Restore floating panel + its overlay dimmer
     const tdPanel=document.getElementById('td-panel');
+    const tdOverlay=document.getElementById('td-overlay');
     if(tdPanel){ tdPanel.style.display=''; tdPanel.classList.add('open'); }
-    // td-overlay stays inactive - user clicks X on panel to close fully
+    if(tdOverlay) tdOverlay.classList.add('open');
   }
 }
 
