@@ -5188,25 +5188,182 @@ function openTaskDetail(id){
 
 
 function openTaskDetailExpanded(id){
-  // Populate fields via openTaskDetail, then expand synchronously
-  // First ensure detailExpanded is false so openTaskDetail doesn't conflict
+  const t=getAllTask(id);
+  if(!t) return;
+  currentDetailId=id;
+
+  // If already in expanded state, just refresh content
   if(detailExpanded){
-    // Already expanded: just switch task
-    openTaskDetail(id);
-    // Refresh expanded content
-    const richNote=document.getElementById('td-note-rich');
     const ov=document.getElementById('ov-editor');
-    if(ov && richNote) ov.innerHTML=richNote.innerHTML;
-    const t=getAllTask(id)||{};
-    const titleEls=document.querySelector('#td-expand-overlay div[style*="font-size:20px"]');
-    if(titleEls) titleEls.textContent=t.label||'';
+    if(ov){
+      const noteVal=t.note||'';
+      ov.innerHTML=noteVal.includes('<')?noteVal:plainToRich(noteVal);
+    }
+    const titleEl=document.querySelector('#td-expand-overlay .ov-title');
+    if(titleEl) titleEl.textContent=t.label||'';
     return;
   }
-  openTaskDetail(id);
-  // Expand after DOM settles
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    if(!detailExpanded) toggleDetailExpand();
-  }));
+
+  // Build expanded overlay directly — no small panel needed
+  const overlay=document.getElementById('td-expand-overlay');
+  if(!overlay) return;
+  const cat=getCat(t.catId||'');
+  const noteVal=t.note||'';
+  const richContent=noteVal.includes('<')?noteVal:plainToRich(noteVal);
+
+  overlay.innerHTML='';
+  overlay.style.display='flex';
+  detailExpanded=true;
+
+  // Header
+  const hdr=document.createElement('div');
+  hdr.style.cssText='padding:10px 28px 8px;border-bottom:1px solid var(--g100);flex-shrink:0;display:flex;align-items:center;gap:10px;';
+  const cbEl=document.createElement('div');
+  cbEl.className='task-cb'+(taskDoneState[id]?' checked':'');
+  cbEl.style.cssText='width:18px;height:18px;cursor:pointer;flex-shrink:0;';
+  cbEl.onclick=()=>toggleDetailDone();
+  const catBadge=document.createElement('span');
+  catBadge.style.cssText=`font-size:10px;padding:2px 10px;border-radius:20px;background:${cat.bg};color:${cat.color};font-weight:500;`;
+  catBadge.textContent=cat.name||'';
+  const btns=document.createElement('div');
+  btns.style.cssText='margin-left:auto;display:flex;gap:4px;';
+  const btnCollapse=document.createElement('button');
+  btnCollapse.style.cssText='background:none;border:none;font-size:16px;cursor:pointer;color:var(--g400);padding:2px 6px;';
+  btnCollapse.title='Reduzir';
+  btnCollapse.textContent='⤡';
+  btnCollapse.onclick=()=>{
+    // Save note from ov-editor back
+    const ov=document.getElementById('ov-editor');
+    if(ov) saveDetailField('note', ov.innerHTML||'');
+    // Hide overlay
+    overlay.style.display='none';
+    overlay.innerHTML='';
+    detailExpanded=false;
+    // Open small panel
+    openTaskDetail(id);
+  };
+  const btnClose=document.createElement('button');
+  btnClose.style.cssText='background:none;border:none;font-size:16px;cursor:pointer;color:var(--g400);padding:2px 6px;';
+  btnClose.textContent='✕';
+  btnClose.onclick=()=>{
+    const ov=document.getElementById('ov-editor');
+    if(ov) saveDetailField('note', ov.innerHTML||'');
+    overlay.style.display='none';
+    overlay.innerHTML='';
+    detailExpanded=false;
+    currentDetailId=null;
+  };
+  btns.appendChild(btnCollapse);
+  btns.appendChild(btnClose);
+  hdr.appendChild(cbEl);
+  hdr.appendChild(catBadge);
+  hdr.appendChild(btns);
+  overlay.appendChild(hdr);
+
+  // Title
+  const titleEl=document.createElement('div');
+  titleEl.className='ov-title';
+  titleEl.style.cssText='padding:14px 28px 4px;flex-shrink:0;font-size:20px;font-weight:700;color:var(--g800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+  titleEl.textContent=t.label||'';
+  overlay.appendChild(titleEl);
+
+  // Toolbar
+  const toolbar=document.createElement('div');
+  toolbar.style.cssText='display:flex;align-items:center;gap:2px;padding:4px 28px;border-bottom:1px solid var(--g100);flex-shrink:0;';
+  toolbar.innerHTML=`
+    <button class="td-rich-btn" onclick="ovHeader()" title="Cabeçalho" style="font-weight:700;font-size:11px;">H</button>
+    <div class="td-rich-sep"></div>
+    <button class="td-rich-btn" onclick="ovFmt('bold')"><b>B</b></button>
+    <button class="td-rich-btn" onclick="ovFmt('italic')"><i>I</i></button>
+    <button class="td-rich-btn" onclick="ovFmt('strikeThrough')" style="text-decoration:line-through;">S</button>
+    <button class="td-rich-btn" onclick="ovHighlight()" style="background:#43b8cf4f;border-radius:3px;">M</button>
+    <div class="td-rich-sep"></div>
+    <button class="td-rich-btn" onclick="ovQuote()" style="font-style:italic;font-size:14px;">"</button>
+    <button class="td-rich-btn" onclick="ovCheckbox()">☑</button>
+    <button class="td-rich-btn" onclick="ovHR()">─</button>
+    <div class="td-rich-sep"></div>
+    <button class="td-rich-btn" onclick="ovFmt('insertUnorderedList')">•</button>
+    <button class="td-rich-btn" onclick="ovFmt('insertOrderedList')">1.</button>`;
+  overlay.appendChild(toolbar);
+
+  // Rich editor
+  const editor=document.createElement('div');
+  editor.id='ov-editor';
+  editor.contentEditable='true';
+  editor.setAttribute('data-placeholder','Notas, links, contexto…');
+  editor.style.cssText='flex:1;padding:16px 28px;outline:none;font-family:inherit;font-size:13px;line-height:1.8;color:var(--g800);overflow-y:auto;min-height:0;';
+  editor.innerHTML=richContent;
+  editor.oninput=()=>ovSave();
+
+  // Enter key: prevent font-size jumping
+  editor.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      e.preventDefault();
+      if(e.shiftKey){
+        document.execCommand('insertHTML',false,'<br>');
+      } else {
+        const sel=window.getSelection();
+        if(sel&&sel.rangeCount){
+          const range=sel.getRangeAt(0);
+          range.deleteContents();
+          const p=document.createElement('p');
+          p.style.cssText='margin:0 0 .85em 0;font-size:13px;';
+          p.appendChild(document.createElement('br'));
+          range.insertNode(p);
+          range.setStart(p,0);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      }
+    }
+  });
+
+  // Paste: images + html
+  editor.addEventListener('paste',e=>{
+    const items=[...(e.clipboardData?.items||[])];
+    const imgItem=items.find(i=>i.type.startsWith('image/'));
+    if(imgItem){
+      e.preventDefault();
+      const blob=imgItem.getAsFile();
+      if(!blob) return;
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        const wrap=_makeImgWrap(ev.target.result);
+        const sel=window.getSelection();
+        if(sel&&sel.rangeCount){
+          const range=sel.getRangeAt(0);
+          range.deleteContents(); range.insertNode(wrap);
+          range.setStartAfter(wrap); sel.removeAllRanges(); sel.addRange(range);
+        } else { editor.appendChild(wrap); }
+        editor.dispatchEvent(new Event('input',{bubbles:true}));
+      };
+      reader.readAsDataURL(blob);
+      return;
+    }
+    e.preventDefault();
+    const hp=e.clipboardData.getData('text/html');
+    const tp=e.clipboardData.getData('text/plain');
+    if(hp) document.execCommand('insertHTML',false,cleanPastedHTML(hp));
+    else if(tp) document.execCommand('insertHTML',false,plainToRich(tp));
+  });
+
+  overlay.appendChild(editor);
+  setTimeout(()=>editor.focus(),50);
+}
+
+// Helper shared by both editors
+function _makeImgWrap(src){
+  const wrap=document.createElement('div');
+  wrap.className='td-img-wrap';
+  const img=document.createElement('img');
+  img.src=src; img.style.cssText='max-width:100%;height:auto;border-radius:6px;display:block;';
+  const bar=document.createElement('div');
+  bar.className='td-img-resize-bar';
+  bar.innerHTML='<button class="td-img-resize-btn" onclick="tdImgResize(this,\'100%\')">■</button>'+
+    '<button class="td-img-resize-btn" onclick="tdImgResize(this,\'55%\')">◧</button>'+
+    '<button class="td-img-resize-btn" onclick="tdImgResize(this,\'30%\')">▪</button>';
+  wrap.appendChild(img); wrap.appendChild(bar);
+  return wrap;
 }
 
 // ── TASK DETAIL RICH EDITOR ──
@@ -7737,7 +7894,7 @@ function ovHeader(){
       <button id="td-star-btn" onmousedown="event.stopPropagation()" onclick="toggleDetailPriority()" title="Marcar como prioridade"
         style="font-size:17px;background:none;border:none;cursor:pointer;padding:2px 4px;border-radius:4px;line-height:1;opacity:.4;transition:all .15s;"
         onmouseenter="this.style.opacity='1'" onmouseleave="this._lit||( this.style.opacity=this._lit?'1':'.4')">⭐</button>
-      <button class="task-detail-close" id="td-expand-btn" onclick="toggleDetailExpand()" onmousedown="event.stopPropagation()" title="Expandir">⤢</button>
+      <button class="task-detail-close" id="td-expand-btn" onclick="currentDetailId&&openTaskDetailExpanded(currentDetailId)" onmousedown="event.stopPropagation()" title="Expandir">⤢</button>
       <button class="task-detail-close" onclick="closeTaskDetail()" onmousedown="event.stopPropagation()">✕</button>
     </div>
   </div>
