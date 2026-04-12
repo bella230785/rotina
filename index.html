@@ -3834,7 +3834,20 @@ function renderTaskPanelByCats(allTasks, title, addCatId){
     return arr.filter(t=>passesFilter(t));
   }
 
-  const allCatIds=[...new Set(allTasks.map(t=>t.catId||'_'))];
+  // Collect catIds from tasks PLUS any empty cards from the current tab
+  // (so newly created empty subcategories also appear)
+  const taskCatIds=[...new Set(allTasks.map(t=>t.catId||'_'))];
+  const tabCards=[];
+  // Find which tabs are being shown for this render
+  const shownTabs=CAT_TAB_MAP[currentSidebarKey]||[];
+  if(CARD_DEFS_BY_TAB[currentSidebarKey]) shownTabs.push(currentSidebarKey);
+  shownTabs.forEach(tabId=>{
+    (CARD_DEFS_BY_TAB[tabId]||[]).forEach(card=>{
+      if(!taskCatIds.includes(card.id)) tabCards.push(card.id);
+    });
+  });
+  const allCatIds=[...taskCatIds, ...tabCards];
+
   allCatIds.forEach(cid=>{
     const cat=CATEGORIES.find(c=>c.id===cid)||(()=>{
       const card=Object.values(CARD_DEFS_BY_TAB).flat().find(c=>c.id===cid);
@@ -3843,7 +3856,8 @@ function renderTaskPanelByCats(allTasks, title, addCatId){
     const pending=filterView(sortTasks(pendingByCat[cid]||[]));
     const sched=scheduledByCat[cid]||[];
     const done=doneByCat[cid]||[];
-    if(!pending.length&&!sched.length&&!done.length) return;
+    // Only skip if truly not in any tab AND has no tasks (keeps empty subcats visible)
+    if(!pending.length&&!sched.length&&!done.length&&!tabCards.includes(cid)) return;
 
     const _collapsed=collapsedCats.has(cid);
     const _doneHidden=collapsedDone.has(cid);
