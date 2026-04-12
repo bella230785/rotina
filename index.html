@@ -1667,7 +1667,7 @@ button, input, select, textarea { font-size: var(--fs) !important; }
                 <div class="nut-vcard-label" data-key="sleep">🌙 sono</div>
                 <input id="nut-card-sleep" type="number" step="0.5" placeholder=""
                   style="font-size:18px;font-weight:700;color:var(--g800);background:none;border:none;outline:none;width:100%;padding:0;font-family:inherit;letter-spacing:-.03em;"
-                  oninput="nutState.sleep=this.value;nutPersist();const h=document.getElementById('nut-e-sleep');if(h)h.value=this.value;"/>
+                  oninput="const _d=nutGetActiveDay();_d.sleep=parseFloat(this.value)||0;if(getActiveDate()===nutTodayKey()){nutState.sleep=this.value;}nutPersist();const h=document.getElementById('nut-e-sleep');if(h)h.value=this.value;"/>
                 <div style="font-size:9px;color:var(--g400);margin-top:2px;">h</div>
               </div>
               <div class="nut-vcard" id="nvc-kg" draggable="true" data-nvc="kg"
@@ -1676,7 +1676,7 @@ button, input, select, textarea { font-size: var(--fs) !important; }
                 <div class="nut-vcard-label" data-key="kg">⚖️ peso</div>
                 <input id="nut-card-kg" type="number" step="0.1" placeholder=""
                   style="font-size:18px;font-weight:700;color:var(--g800);background:none;border:none;outline:none;width:100%;padding:0;font-family:inherit;letter-spacing:-.03em;"
-                  oninput="nutState.kgToday=this.value;nutPersist();const h=document.getElementById('nut-e-kg');if(h)h.value=this.value;"/>
+                  oninput="const _d=nutGetActiveDay();_d.kg=parseFloat(this.value)||0;if(getActiveDate()===nutTodayKey()){nutState.kgToday=this.value;}nutPersist();const h=document.getElementById('nut-e-kg');if(h)h.value=this.value;"/>
                 <div style="font-size:9px;color:var(--g400);margin-top:2px;">kg</div>
               </div>
             </div>
@@ -8583,10 +8583,17 @@ function nutInitVcardDrag(){
 function nutRenderWelcomeDate(){
   const el=document.getElementById('nut-welcome-date');
   if(!el) return;
-  const d=new Date();
+  const activeDate=getActiveDate();
+  const todayStr=nutTodayKey();
   const dias=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
   const meses=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-  el.textContent='hoje é '+dias[d.getDay()]+', dia '+d.getDate()+' de '+meses[d.getMonth()]+'.';
+  const parts=activeDate.split('-').map(Number);
+  const d=new Date(parts[0],parts[1]-1,parts[2]);
+  if(activeDate===todayStr){
+    el.textContent='hoje é '+dias[d.getDay()]+', dia '+d.getDate()+' de '+meses[d.getMonth()]+'.';
+  } else {
+    el.textContent=dias[d.getDay()]+', '+d.getDate()+' de '+meses[d.getMonth()]+' de '+d.getFullYear()+'.';
+  }
 }
 
 // ── TODAY TASKS: pull tasks with due=today OR priority=1 from all tabs ──
@@ -9389,6 +9396,18 @@ function getActiveDate(){
   const el=document.getElementById('nut-active-date');
   return (el&&el.value)?el.value:nutTodayKey();
 }
+// Get or create the day record for the currently viewed date
+function nutGetActiveDay(){
+  const date=getActiveDate();
+  let day=nutState.days.find(d=>d.date===date);
+  if(!day){
+    day={date,prot:0,carbs:0,fat:0,fib:0,cal:0,deficit:0,water:0,sleep:0,ker:0,ex:'',kg:0,
+      poly:0,nourkrin:0,vitaD:0,vitC:0,ferro:0,creatina:0,minoxidil:0,magnesio:0,foods:'',notes:''};
+    nutState.days.push(day);
+    nutState.days.sort((a,b)=>a.date.localeCompare(b.date));
+  }
+  return day;
+}
 
 function nutNavDay(dir){
   const el=document.getElementById('nut-active-date');
@@ -9523,12 +9542,14 @@ function nutRenderMetrics(){
   const el=document.getElementById('nut-metrics');
   if(el) el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;">${macroHtml}</div>`;
 
-  // Restore vitals card values from state
-  const sleep=parseFloat(nutState.sleep)||parseFloat(day.sleep)||0;
-  const kg=parseFloat(nutState.kgToday)||parseFloat(day.kg)||0;
-  const ker=parseInt(nutState.kerToday)||parseInt(day.ker)||0;
-  const cs=document.getElementById('nut-card-sleep'); if(cs&&!cs.value&&sleep) cs.value=sleep;
-  const ck=document.getElementById('nut-card-kg');    if(ck&&!ck.value&&kg)    ck.value=kg;
+  // Restore vitals card values — use activeDate's day record
+  const activeDate=getActiveDate();
+  const activeDay=nutState.days.find(d=>d.date===activeDate)||{};
+  const sleep=parseFloat(activeDate===nutTodayKey()?nutState.sleep:0)||parseFloat(activeDay.sleep)||0;
+  const kg=parseFloat(activeDate===nutTodayKey()?nutState.kgToday:0)||parseFloat(activeDay.kg)||0;
+  const ker=parseInt(activeDate===nutTodayKey()?nutState.kerToday:0)||parseInt(activeDay.ker)||0;
+  const cs=document.getElementById('nut-card-sleep'); if(cs) cs.value=sleep||'';
+  const ck=document.getElementById('nut-card-kg');    if(ck) ck.value=kg||'';
   if(ker) nutSetKerCard(ker);
 }
 
@@ -9543,7 +9564,10 @@ function nutSetKerCard(v){
     btn.style.background=n===newVal?'var(--g800)':'transparent';
     btn.style.color=n===newVal?'#fff':'var(--g500)';
   });
-  nutState.kerToday=newVal||'';
+  // Save to activeDay record
+  const _d=nutGetActiveDay();
+  _d.ker=newVal||0;
+  if(getActiveDate()===nutTodayKey()) nutState.kerToday=newVal||'';
   nutPersist();
   const ck=document.getElementById('nut-card-ker');
   if(ck) ck.textContent=newVal||'—';
@@ -9638,7 +9662,23 @@ function nutRenderVitamins(){
   el.style.gap='0';
 }
 function nutToggleVit(k){
-  nutState.vit[k]=!nutState.vit[k];
+  const activeDate=getActiveDate();
+  const todayStr=nutTodayKey();
+  if(activeDate===todayStr){
+    // Today: use transient nutState.vit
+    nutState.vit[k]=!nutState.vit[k];
+    // Also persist to day record
+    const field=VIT_FIELD_MAP[k];
+    const _d=nutGetActiveDay();
+    if(field) _d[field]=nutState.vit[k]?1:0;
+  } else {
+    // Past day: write directly to day record
+    const field=VIT_FIELD_MAP[k];
+    const _d=nutGetActiveDay();
+    if(field){ _d[field]=_d[field]?0:1; }
+    // Sync nutState.vit for display
+    nutState.vit[k]=!!(_d[VIT_FIELD_MAP[k]]);
+  }
   nutPersist();
   nutRenderVitamins();
   nutRenderDailyProgress();
@@ -9680,17 +9720,15 @@ function nutSaveCardNote(key, val){
 }
 
 async function nutSaveSleepKg(){
-  const today=nutTodayKey();
-  let day=nutState.days.find(d=>d.date===today);
-  if(!day){
-    day={date:today,prot:0,carbs:0,fat:0,fib:0,cal:0,deficit:0,water:0,sleep:0,ker:0,ex:'',kg:0,
-      poly:0,nourkrin:0,vitaD:0,ferro:0,creatina:0,minoxidil:0,magnesio:0,foods:'',notes:''};
-    nutState.days.push(day); nutState.days.sort((a,b)=>a.date.localeCompare(b.date));
-  }
+  const day=nutGetActiveDay();
   const sl=parseFloat(document.getElementById('nut-card-sleep')?.value)||0;
   const kg=parseFloat(document.getElementById('nut-card-kg')?.value)||0;
   if(sl) day.sleep=sl;
   if(kg) day.kg=kg;
+  if(getActiveDate()===nutTodayKey()){
+    if(sl) nutState.sleep=sl;
+    if(kg) nutState.kgToday=kg;
+  }
   nutPersist();
   nutRenderOverviewContent();
   try{ await pushToSheets({...day,data:day.date}); }catch(e){}
@@ -9702,25 +9740,20 @@ async function nutSaveSleepKg(){
 }
 
 async function nutSaveTodayVitals(){
-  const url=nutState.sheetsUrl;
-  if(!url) return;
-  const today=nutTodayKey();
-  // Build a minimal entry with current vit + water state merged into today's day
-  const existing=nutState.days.find(d=>d.date===today)||{};
-  const entry={
-    ...existing,
-    date:today, data:today,
-    poly:  nutState.vit['0-0']?1:0,
-    nourkrin:nutState.vit['0-1']?1:0,
-    vitaD: nutState.vit['0-2']?1:0,
-    vitC:  nutState.vit['1-0']?1:0,
-    ferro: nutState.vit['1-1']?1:0,
-    colageno:nutState.vit['2-0']?1:0,
-    minoxidil:nutState.vit['2-1']?1:0,
-    magnesio:nutState.vit['2-2']?1:0,
-    water: nutState.waterChecks*500,
-  };
-  try{ await pushToSheets(entry); }catch(e){ console.warn('nutSaveTodayVitals:',e); }
+  // Use activeDay — works for today and past days
+  const day=nutGetActiveDay();
+  // Sync vit state into the day record
+  day.poly=nutState.vit['0-0']?1:0;
+  day.nourkrin=nutState.vit['0-1']?1:0;
+  day.vitaD=nutState.vit['0-2']?1:0;
+  day.vitC=nutState.vit['1-0']?1:0;
+  day.ferro=nutState.vit['1-1']?1:0;
+  day.creatina=nutState.vit['2-0']?1:0;
+  day.minoxidil=nutState.vit['2-1']?1:0;
+  day.magnesio=nutState.vit['2-2']?1:0;
+  day.water=nutState.waterChecks*500;
+  nutPersist();
+  try{ await pushToSheets({...day,data:day.date}); }catch(e){ console.warn('nutSaveTodayVitals:',e); }
 }
 
 // ── WATER ────────────────────────────────────────────────────────────────────
@@ -9738,6 +9771,9 @@ function nutRenderWater(){
 }
 function toggleWater(i){
   nutState.waterChecks = nutState.waterChecks===i+1 ? i : i+1;
+  // Persist to day record immediately
+  const _d=nutGetActiveDay();
+  _d.water=nutState.waterChecks*500;
   nutPersist(); nutRenderWater(); nutRenderDailyProgress();
   nutSaveTodayVitals();
 }
