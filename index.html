@@ -7664,11 +7664,28 @@ function applySnapshot(snap){
   if(snap.hiddenTimeRanges) snap.hiddenTimeRanges.forEach(k=>hiddenTimeRanges.add(k));
   if(snap.nutState){
     const sn=snap.nutState;
+    // Preservar campos transientes de hoje antes de sobrescrever
+    const todayKey=nutTodayKey();
+    const localRaw=localStorage.getItem('nutr3');
+    const localNut=localRaw?JSON.parse(localRaw):null;
+    const localIsToday=localNut?.lastDate===todayKey;
+    // Mesclar days
     const merged={};
     nutState.days.forEach(d=>merged[d.date]=d);
     (sn.days||[]).forEach(d=>merged[d.date]=d);
     Object.assign(nutState, sn);
     nutState.days=Object.values(merged).sort((a,b)=>a.date.localeCompare(b.date));
+    // Se localStorage tem dados de hoje, restaurar campos transientes
+    if(localIsToday){
+      nutState.lastDate=todayKey;
+      nutState.foods=localNut.foods||[];
+      nutState.vit=localNut.vit||{};
+      nutState.waterChecks=localNut.waterChecks||0;
+      nutState.sleep=localNut.sleep||'';
+      nutState.kgToday=localNut.kgToday||'';
+      nutState.exToday=localNut.exToday||'';
+      nutState.kerToday=localNut.kerToday||'';
+    }
     nutPersist();
   }
   if(snap.nutUI){
@@ -9447,16 +9464,43 @@ function load(){
   }catch(e){}
   const today=nutTodayKey();
   if(nutState.lastDate!==today){
-    nutState.foods=[];nutState.vit={};nutState.waterChecks=0;
-    nutState.sleep='';nutState.kgToday='';nutState.exToday='';nutState.kerToday='';
-    nutState.lastDate=today;nutPersist();
+    // Só resetar campos transientes se realmente é um novo dia
+    // (verificar se nutState veio do localStorage de hoje ou é de outro dia)
+    const lsRaw=localStorage.getItem('nutr3');
+    const lsState=lsRaw?JSON.parse(lsRaw):null;
+    const lsLastDate=lsState?.lastDate||'';
+    if(lsLastDate!==today){
+      // Realmente é um novo dia — resetar campos transientes
+      nutState.foods=[];nutState.vit={};nutState.waterChecks=0;
+      nutState.sleep='';nutState.kgToday='';nutState.exToday='';nutState.kerToday='';
+      nutState.lastDate=today;nutPersist();
+    } else {
+      // localStorage tem dados de hoje — restaurar estado transiente de lá
+      nutState.foods=lsState.foods||[];
+      nutState.vit=lsState.vit||{};
+      nutState.waterChecks=lsState.waterChecks||0;
+      nutState.sleep=lsState.sleep||'';
+      nutState.kgToday=lsState.kgToday||'';
+      nutState.exToday=lsState.exToday||'';
+      nutState.kerToday=lsState.kerToday||'';
+      nutState.lastDate=today;
+    }
   }
 }
 function nutPersist(){
-  try{ localStorage.setItem('nutr3',JSON.stringify(nutState)); }catch(e){}
-  // Debounce sync to Supabase (nutState included in buildSnapshot)
+  try{
+    localStorage.setItem('nutr3',JSON.stringify(nutState));
+    // Atualizar timestamp IMEDIATAMENTE para que loadFromAppsScript
+    // saiba que o local é mais recente que o Supabase
+    const _ts=Date.now();
+    localStorage.setItem('nutr3_syncTs', _ts);
+    // Usar a chave do LS também para a comparação principal
+    const lsKey=(typeof LS!=='undefined'?LS:'r3_');
+    localStorage.setItem(lsKey+'syncTs', _ts);
+  }catch(e){}
+  // Debounce sync to Supabase
   clearTimeout(nutPersist._t);
-  nutPersist._t=setTimeout(()=>{ if(typeof saveState==='function') saveState(); }, 3000);
+  nutPersist._t=setTimeout(()=>{ if(typeof saveState==='function') saveState(); }, 1500);
 }
 function nutTodayKey(){
   const d=new Date();
