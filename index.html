@@ -4881,9 +4881,9 @@ function tpDragStart(e, el){
 function tpDragOver(e, el){
   if(!_tp.taskId || _tp.taskId === el.dataset.taskid) return;
   e.preventDefault();
-  e.stopPropagation();
+  // Note: no stopPropagation — let event bubble to group for cross-cat highlighting
   document.querySelectorAll('.task-item').forEach(i => i.style.borderTop = '');
-  document.querySelectorAll('.tp-cat-group').forEach(g => g.style.outline = '');
+  document.querySelectorAll('.tp-cat-group').forEach(g => { g.style.outline = ''; g.style.borderTop = ''; });
   const dragging = document.querySelector(`.task-item[data-taskid="${_tp.taskId}"]`);
   if(dragging) dragging.style.opacity = '.35';
   el.style.borderTop = '2px solid var(--accent,#7C6FCD)';
@@ -4973,12 +4973,24 @@ function tpCatDragEnd(e){
   tpClearIndicators();
 }
 
-// Drag do header da categoria sobre outro grupo — mostrar indicador
+// Drag sobre o header — aceita tanto task drag quanto cat drag
 function tpCatDragOver(e, hdr, catId){
+  // Task drag: highlight the group as drop target
+  if(_tp.taskId){
+    e.preventDefault();
+    e.stopPropagation();
+    document.querySelectorAll('.task-item').forEach(i => i.style.borderTop = '');
+    document.querySelectorAll('.tp-cat-group').forEach(g => g.style.outline = '');
+    const dragging = document.querySelector(`.task-item[data-taskid="${_tp.taskId}"]`);
+    if(dragging) dragging.style.opacity = '.35';
+    const group = hdr.closest('.tp-cat-group');
+    if(group){ group.style.outline = '2px dashed var(--accent,#7C6FCD)'; group.style.outlineOffset = '-2px'; }
+    return;
+  }
+  // Cat drag: reorder categories
   if(!_tp.catId || _tp.catId === catId) return;
   e.preventDefault();
   e.stopPropagation();
-  // Limpar todos, manter só o dragging opaco e o alvo marcado
   document.querySelectorAll('.tp-cat-group').forEach(g => {
     g.style.borderTop = '';
     g.style.opacity = g.dataset.catid === _tp.catId ? '.35' : '';
@@ -4989,13 +5001,24 @@ function tpCatDragOver(e, hdr, catId){
 
 function tpCatDragLeave(hdr){
   const group = hdr.closest('.tp-cat-group');
-  if(group) group.style.borderTop = '';
+  if(group){ group.style.borderTop = ''; group.style.outline = ''; }
 }
 
-// Soltar categoria sobre outra categoria
+// Soltar sobre o header — aceita task drag ou cat drag
 function tpCatDrop(e, hdr, targetCatId){
   e.preventDefault();
   e.stopPropagation();
+
+  // Task drag: move task to this category
+  if(_tp.taskId){
+    const draggedId = _tp.taskId;
+    _tp.taskId = null;
+    tpClearIndicators();
+    tpMoveTaskToCard(draggedId, targetCatId);
+    tpRerender();
+    return;
+  }
+
   const fromCatId = _tp.catId;
   _tp.catId = null;
   _tpCatDragId = null;
