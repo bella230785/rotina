@@ -4238,7 +4238,7 @@ function toggleSidebar(){
     if(btn) btn.textContent='›';
     document.documentElement.style.setProperty('--sb-w','68px');
   }
-  try{localStorage.setItem('sbExpanded', sidebarExpanded?'1':'0');}catch(e){}
+  try{localStorage.setItem('sbExpanded', sidebarExpanded?'1':'0');if(typeof saveState==='function')saveState();}catch(e){}
 }
 let taskPanelOpen = false;
 function toggleTaskPanel(btn){
@@ -6722,7 +6722,7 @@ const EXT_PRESETS=[
 
 function loadExtLinks(){ /* disabled */ }
 
-function saveExtLinks(){localStorage.setItem(LS+'extLinks',JSON.stringify(extLinks));}
+function saveExtLinks(){localStorage.setItem(LS+'extLinks',JSON.stringify(extLinks));if(typeof saveState==='function')saveState();}
 
 function renderExtLinks(){
   const wrap=document.getElementById('sb-ext-links');
@@ -7413,7 +7413,33 @@ updateSidebarWidgets();populateTimeSelects();
 setTimeout(()=>loadFromAppsScript(), 300);
 
 // Salvar ao fechar (cache local)
-window.addEventListener('beforeunload', saveState);
+// Ao fechar/sair: sync imediato pro Supabase (usa sendBeacon para não bloquear)
+window.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'hidden'){
+    // página ficou em background ou foi fechada — sync imediato
+    clearTimeout(_syncTimeout);
+    const snapshot = buildSnapshot();
+    // sendBeacon não espera resposta mas garante que o request sai
+    try{
+      navigator.sendBeacon(
+        `${SB_URL}/rest/v1/${SB_TABLE}`,
+        new Blob([JSON.stringify({id:1, value:snapshot})], {type:'application/json'})
+      );
+    } catch(e){
+      // fallback: fetch síncrono (keepalive)
+      fetch(`${SB_URL}/rest/v1/${SB_TABLE}`, {
+        method:'POST', keepalive:true,
+        headers:{...sbHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'},
+        body: JSON.stringify({id:1, value:snapshot})
+      }).catch(()=>{});
+    }
+    saveState(); // atualiza cache local também
+  }
+});
+window.addEventListener('beforeunload', ()=>{
+  clearTimeout(_syncTimeout);
+  saveState();
+});
 
 // Botão para limpar tudo (útil para debug)
 function clearSavedState(){
@@ -7501,6 +7527,9 @@ function buildSnapshot(){
     clChecked,
     calState,
     weekStore,
+    overlays,
+    cardOrder,
+    extLinks,
     hiddenTimeRanges: [...hiddenTimeRanges],
     nutState: nutState,
     nutUI,
@@ -7539,15 +7568,22 @@ function applySnapshot(snap){
   if(snap.calState) for(let d=0;d<7;d++) calState[d]=snap.calState[d]||{};
   if(snap.weekStore) Object.keys(snap.weekStore).forEach(k=>{ weekStore[k]=snap.weekStore[k]; });
   if(snap.hiddenTimeRanges) snap.hiddenTimeRanges.forEach(k=>hiddenTimeRanges.add(k));
+  if(snap.overlays) Object.assign(overlays, snap.overlays);
+  if(snap.cardOrder) Object.assign(cardOrder, snap.cardOrder);
+  if(snap.extLinks && Array.isArray(snap.extLinks)){
+    extLinks.length=0;
+    snap.extLinks.forEach(l=>extLinks.push(l));
+  }
   if(snap.nutState){
     const sn=snap.nutState;
-    // Mesclar days: Supabase ganha sobre seed do HTML
     const merged={};
     nutState.days.forEach(d=>merged[d.date]=d);
     (sn.days||[]).forEach(d=>merged[d.date]=d);
     Object.assign(nutState, sn);
     nutState.days=Object.values(merged).sort((a,b)=>a.date.localeCompare(b.date));
     nutPersist();
+    // Re-inject custom foods into FOODS array
+    if(typeof loadCustomFoods==='function') loadCustomFoods();
   }
   if(snap.nutUI){
     const u=snap.nutUI;
@@ -7556,7 +7592,16 @@ function applySnapshot(snap){
     if(u.cardNotes)   localStorage.setItem('nutCardNotes',   JSON.stringify(u.cardNotes));
     if(u.inspiration) localStorage.setItem('nutInspirationText', u.inspiration);
     if(u.taskIcons)   localStorage.setItem('nutTaskIcons',   JSON.stringify(u.taskIcons));
-    if(u.sbExpanded)  localStorage.setItem('sbExpanded',     u.sbExpanded);
+    if(u.sbExpanded){
+      localStorage.setItem('sbExpanded', u.sbExpanded);
+      if(u.sbExpanded==='1'){
+        const sb=document.getElementById('sidebar');
+        const btn=document.getElementById('sb-toggle-btn');
+        if(sb){sb.classList.add('sb-expanded');document.documentElement.style.setProperty('--sb-w','210px');}
+        if(btn) btn.textContent='‹';
+        sidebarExpanded=true;
+      }
+    }
   }
 }
 
@@ -7580,15 +7625,22 @@ async function loadFromAppsScript(){
     const snap = JSON.parse(rows[0].value);
     applySnapshot(snap);
     showSyncStatus('ok');
+    // Re-render everything
     renderCal();
     renderSidebarCats();
     renderTaskPanelForKey(currentSidebarKey||'semana');
     renderPicker();
-    // Re-render nutrition if active
+    if(typeof renderExtLinks==='function') renderExtLinks();
+    // Re-render nutrition
     if(window._nutInited){
-      nutRenderWelcomeDate();nutRenderWater();nutRenderVitamins();
-      nutRenderMetrics();nutRenderFoodList();nutRenderDailyProgress();
-      nutRenderWeekRings();nutRenderRightCol();
+      nutRenderWelcomeDate();
+      nutRenderMetrics();nutRenderFoodList();
+      nutRenderVitamins();nutRenderWater();
+      nutRenderDailyProgress();nutRenderWeekRings();
+      if(typeof nutRenderRightCol==='function') nutRenderRightCol();
+      if(typeof nutRenderOverviewContent==='function') nutRenderOverviewContent();
+      if(typeof renderTreinos==='function') renderTreinos();
+      if(typeof renderBioTable==='function') renderBioTable();
     }
   } catch(e){
     console.warn('Supabase load failed, using cache:', e);
