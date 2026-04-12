@@ -210,7 +210,7 @@ body{
   transition:width .22s cubic-bezier(.4,0,.2,1);
 }
 .task-panel.tp-open{
-  width:221px;min-width:120px;
+  width:270px;min-width:150px;
 }
 .task-panel-resize-l,.task-panel-resize-r{
   position:absolute;top:0;width:5px;height:100%;
@@ -3846,6 +3846,7 @@ function renderTaskPanelByCats(allTasks, title, addCatId){
     if(!pending.length&&!sched.length&&!done.length) return;
 
     const _collapsed=collapsedCats.has(cid);
+    const _doneHidden=collapsedDone.has(cid);
     html+=`<div class="tp-cat-group" data-catid="${cid}">
       <div class="tp-cat-group-hdr" style="cursor:grab;user-select:none;"
         draggable="true"
@@ -3855,8 +3856,8 @@ function renderTaskPanelByCats(allTasks, title, addCatId){
         ondragleave="tpCatDragLeave(this)"
         ondrop="tpCatDrop(event,this,'${cid}')">
         <span class="tp-cat-group-dot" style="background:${cat.bg};cursor:pointer;" onclick="event.stopPropagation();openCatColorPicker('${cid}',event)" title="Mudar cor"></span>
-        <span class="tp-cat-group-name" style="text-transform:lowercase;flex:1;" onclick="toggleCatGroup('${cid}',event)">${cat.name}</span>
-        <button onclick="event.stopPropagation();tpAddSubcat('${cid}')"
+        <span class="tp-cat-group-name" style="text-transform:lowercase;flex:1;" onclick="toggleCatGroup('${cid}')">${cat.name}</span>
+        <button onclick="event.stopPropagation();tpInlineAddSubcat('${cid}',this)"
           title="Nova subcategoria"
           style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--g300);padding:0 4px;line-height:1;transition:color .1s;"
           onmouseenter="this.style.color='var(--accent)'" onmouseleave="this.style.color='var(--g300)'">＋</button>
@@ -3864,16 +3865,17 @@ function renderTaskPanelByCats(allTasks, title, addCatId){
       <div id="tcg-${cid}" style="display:${_collapsed?'none':'block'}">
       ${pending.map(t=>taskItemHTML(t)).join('')}
       ${sched.map(t=>taskItemHTML(t,false,true)).join('')}
+      ${done.length?`
+        <div class="tp-cat-done-toggle2" onclick="toggleCatDoneInline('${cid}',this)" style="display:flex;align-items:center;gap:6px;padding:4px 16px 4px 10px;cursor:pointer;font-size:11px;color:var(--g400);transition:color .12s;" onmouseover="this.style.color='var(--g700)'" onmouseout="this.style.color='var(--g400)'">
+          <span style="font-size:9px">${_doneHidden?'▸':'▾'}</span>
+          <span>concluídas</span>
+          <span style="font-size:10px;background:var(--g100);padding:1px 6px;border-radius:20px;margin-left:auto">${done.length}</span>
+        </div>
+        <div id="tpd-${cid}" style="display:${_doneHidden?'none':'block'}">
+          ${done.map(t=>taskItemHTML(t,true)).join('')}
+        </div>`:''}
       </div>
     </div>`;
-    if(done.length){
-      html+=`<div class="tp-cat-done-toggle" onclick="toggleCatDone('${cid}',this)">
-        <span>Concluídas</span><span class="tp-cat-done-count">${done.length}</span><span class="tp-cat-done-arrow">▸</span>
-      </div>
-      <div class="tp-cat-done-list" id="tpd-${cid}" style="display:none">
-        ${done.map(t=>taskItemHTML(t,true)).join('')}
-      </div>`;
-    }
   });
 
   if(!html) html=`<div style="padding:20px 16px;font-size:12px;color:var(--g300);text-align:center">Nenhuma tarefa</div>`;
@@ -3900,6 +3902,7 @@ const SIDEBAR_MAP={
 let currentSidebarKey='semana';
 let currentFilterCat=null;
 const collapsedCats=new Set();
+const collapsedDone=new Set(); // tracks which categories have done section hidden
 const hiddenTimeRanges=new Set(); // "di-siStart-siEnd" strings
 let taskSortMode="priority";
 
@@ -4078,6 +4081,53 @@ function pickCatColor(catId){
     cat.color=(r*299+g*587+b*114)/1000>140?'#2a2a2a':'#ffffff';
     renderSidebarCats();saveState();
   });
+}
+
+function toggleCatDoneInline(cid, btn){
+  if(collapsedDone.has(cid)) collapsedDone.delete(cid);
+  else collapsedDone.add(cid);
+  const list=document.getElementById('tpd-'+cid);
+  const arrow=btn?.querySelector('span:first-child');
+  if(!list) return;
+  const open=collapsedDone.has(cid);
+  list.style.display=open?'none':'block';
+  if(arrow) arrow.textContent=open?'▸':'▾';
+}
+
+function tpInlineAddSubcat(parentCatId, btn){
+  // Check if there's already an input open below this header
+  const hdr=btn.closest('.tp-cat-group-hdr');
+  const group=btn.closest('.tp-cat-group');
+  if(!group) return;
+  // If input already exists, focus it
+  const existing=group.querySelector('.tp-subcat-inline-input');
+  if(existing){ existing.focus(); return; }
+  // Create inline input row
+  const row=document.createElement('div');
+  row.style.cssText='display:flex;align-items:center;gap:6px;padding:4px 14px 6px;';
+  const inp=document.createElement('input');
+  inp.className='tp-subcat-inline-input';
+  inp.placeholder='nome da subcategoria…';
+  inp.style.cssText='flex:1;border:none;border-bottom:1px solid var(--accent);outline:none;font-family:inherit;font-size:12px;background:transparent;padding:2px 0;color:var(--g800);';
+  const ok=document.createElement('button');
+  ok.textContent='✓';
+  ok.style.cssText='background:none;border:none;cursor:pointer;color:var(--accent);font-size:13px;padding:0 2px;';
+  const cancel=document.createElement('button');
+  cancel.textContent='✕';
+  cancel.style.cssText='background:none;border:none;cursor:pointer;color:var(--g300);font-size:12px;padding:0 2px;';
+  row.appendChild(inp); row.appendChild(ok); row.appendChild(cancel);
+  // Insert after the header div
+  hdr.insertAdjacentElement('afterend', row);
+  inp.focus();
+  function save(){
+    const name=inp.value.trim();
+    row.remove();
+    if(name) tpAddSubcat(parentCatId, name);
+  }
+  ok.onclick=save;
+  cancel.onclick=()=>row.remove();
+  inp.onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();save();} if(e.key==='Escape') row.remove(); };
+  inp.onblur=()=>setTimeout(()=>{if(document.contains(row))save();},200);
 }
 
 function toggleCatDone(cid, btn){
@@ -4839,8 +4889,8 @@ function tpCatDrop(e, hdr, targetCatId){
 }
 
 // ── CREATE SUBCATEGORY ────────────────────────────────────────────────────────
-function tpAddSubcat(parentCatId){
-  const name=prompt('Nome da nova subcategoria:');
+function tpAddSubcat(parentCatId, nameArg){
+  const name=nameArg||prompt('Nome da nova subcategoria:');
   if(!name||!name.trim()) return;
 
   // Find which tab this catId belongs to
@@ -8460,7 +8510,7 @@ function nutToggleTreinoDate(dateStr){
   day.ex=hasTreino?'':'treino';
   nutPersist();
   nutRenderTreinoWidget();
-  if(nutState.sheetsUrl) pushToSheets({...day,data:day.date}).catch(()=>{});
+  pushToSheets({...day,data:day.date}).catch(()=>{});
 }
 
 // Calendar state — which month is displayed
@@ -8539,7 +8589,7 @@ function nutCalDayClickTreino(event, dateStr){
     // Clear
     day.ex=''; nutPersist();
     nutRenderTreinoWidget();
-    if(nutState.sheetsUrl) pushToSheets({...day,data:day.date}).catch(()=>{});
+    pushToSheets({...day,data:day.date}).catch(()=>{});
     return;
   }
   // Show type picker inline near the clicked cell
@@ -8585,7 +8635,7 @@ function nutSaveTreinoForDate(dateStr, exType){
   if(dateStr===nutTodayKey()) nutState.exToday=exType;
   nutPersist();
   nutRenderTreinoWidget();
-  if(nutState.sheetsUrl) pushToSheets({...day,data:day.date}).catch(()=>{});
+  pushToSheets({...day,data:day.date}).catch(()=>{});
 }
 
 function nutRenderTreinoWidget(){
@@ -8895,10 +8945,12 @@ let nutState = {
 
 // ── SYNC FROM SHEETS ─────────────────────────────────────────────────────────
 async function nutSyncFromSheets(){
-  if(!nutState.sheetsUrl) return;
+  // Migrado para Supabase — busca da tabela 'nutrition'
   try{
-    const res = await fetch(nutState.sheetsUrl);
-    if(!res.ok) return;
+    const res = await fetch(`${SB_URL}/rest/v1/nutrition?select=*&order=date.asc&limit=500`, {
+      headers: sbHeaders()
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
     const rows = await res.json();
     if(!Array.isArray(rows)||!rows.length) return;
 
@@ -8907,7 +8959,7 @@ async function nutSyncFromSheets(){
     nutState.days.forEach(d=>merged[d.date]=d);
     rows.forEach(r=>{
       // SheetDB may use 'data' (Portuguese) instead of 'date'
-      const dateVal = r.date || r.data || '';
+      const dateVal = r.date || '';
       // Skip rows with empty date or future dates beyond today
       if(!dateVal || dateVal > nutTodayKey()) return;
       // Skip rows that are clearly test/empty data
@@ -9322,12 +9374,8 @@ async function nutToggleVitDate(k, field, date){
   dayRec[field] = dayRec[field] ? 0 : 1;
   nutPersist();
   nutRenderVitamins();
-  // Save to SheetDB
-  if(nutState.sheetsUrl){
-    try{
-      await pushToSheets({...dayRec, data:dayRec.date});
-    }catch(e){ console.warn('vit save error:',e); }
-  }
+  // Save to Supabase
+  try{ await pushToSheets({...dayRec, data:dayRec.date}); }catch(e){ console.warn('vit save error:',e); }
 }
 // legacy alias
 function toggleVit(k){ nutToggleVit(k); }
@@ -9356,9 +9404,7 @@ async function nutSaveSleepKg(){
   if(kg) day.kg=kg;
   nutPersist();
   nutRenderOverviewContent();
-  if(nutState.sheetsUrl){
-    try{ await pushToSheets({...day,data:day.date}); }catch(e){}
-  }
+  try{ await pushToSheets({...day,data:day.date}); }catch(e){}
   // Brief visual feedback
   document.querySelectorAll('[onclick="nutSaveSleepKg()"]').forEach(b=>{
     const orig=b.textContent; b.textContent='✓'; b.style.color='#7A9E78';
@@ -9513,35 +9559,47 @@ async function nutSaveDay(){
 
   renderWeekCal(); nutRenderMiniCals();
   const msg=document.getElementById('nut-save-msg');
-  if(nutState.sheetsUrl){
-    msg.textContent='salvando...';
-    try{ await pushToSheets(entry); msg.textContent='salvo e sincronizado'; }
-    catch(e){ msg.textContent='salvo (erro no sheets)'; }
-  } else {
-    msg.textContent='salvo';
-  }
+  msg.textContent='salvando...';
+  try{ await pushToSheets(entry); msg.textContent='salvo e sincronizado ↑'; }
+  catch(e){ msg.textContent='salvo (erro no sync)'; console.warn(e); }
   setTimeout(()=>msg.textContent='',3000);
 }
 
 async function pushToSheets(entry){
-  const url     = nutState.sheetsUrl;
-  const headers = {'Content-Type':'application/json'};
-  const sheetEntry = {...entry, data: entry.date};
-
-  // Delete ALL existing rows for this date using SheetDB search+delete
-  // SheetDB delete endpoint: DELETE /column_name/value
+  // Migrado para Supabase — SheetDB excedeu o limite
+  // Upsert na tabela 'nutrition' usando date como chave única
   try {
-    await fetch(`${url}/data/${entry.date}`, {method:'DELETE'});
-  } catch(e) {}
-  // Wait a moment for delete to complete
-  await new Promise(r => setTimeout(r, 300));
-
-  // POST single clean row
-  await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({data: sheetEntry})
-  });
+    const row = {
+      date:      entry.date,
+      prot:      entry.prot      || 0,
+      carbs:     entry.carbs     || 0,
+      fat:       entry.fat       || 0,
+      fib:       entry.fib       || 0,
+      cal:       entry.cal       || 0,
+      deficit:   entry.deficit   || 0,
+      water:     entry.water     || 0,
+      sleep:     entry.sleep     || 0,
+      ker:       entry.ker       || 0,
+      ex:        String(entry.ex || ''),
+      poly:      entry.poly      || 0,
+      nourkrin:  entry.nourkrin  || 0,
+      vitaD:     entry.vitaD     || 0,
+      ferro:     entry.ferro     || 0,
+      creatina:  entry.creatina  || 0,
+      minoxidil: entry.minoxidil || 0,
+      magnesio:  entry.magnesio  || 0,
+      foods:     typeof entry.foods === 'object' ? JSON.stringify(entry.foods) : (entry.foods || ''),
+      kg:        entry.kg        || 0,
+      notes:     entry.notes     || '',
+    };
+    await fetch(`${SB_URL}/rest/v1/nutrition`, {
+      method: 'POST',
+      headers: {...sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal'},
+      body: JSON.stringify(row)
+    });
+  } catch(e) {
+    console.warn('pushToSheets (Supabase) error:', e);
+  }
 }
 
 function renderVitHeatmap(days){
