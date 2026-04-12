@@ -7381,115 +7381,22 @@ function calPasteBlock(di, si){
 }
 
 function saveState(){
-  try{
-    // Timestamp para comparação com Supabase
-    const _ts = Date.now();
-    localStorage.setItem(LS+'syncTs', _ts);
-    // Checks das checklists
-    localStorage.setItem(LS+'clChecked', JSON.stringify(clChecked));
-    // Estado das tarefas do painel (done/agendada)
-    localStorage.setItem(LS+'taskDoneState', JSON.stringify(taskDoneState));
-    localStorage.setItem(LS+'scheduledTasks', JSON.stringify([...scheduledTasks]));
-    // Categorias editadas/criadas
-    localStorage.setItem(LS+'CATEGORIES', JSON.stringify(CATEGORIES));
-    // Ordem dos cards
-    localStorage.setItem(LS+'cardOrder', JSON.stringify(cardOrder));
-    // CARD_DEFS_BY_TAB (tarefas adicionadas/renomeadas)
-    localStorage.setItem(LS+'CARD_DEFS_BY_TAB', JSON.stringify(CARD_DEFS_BY_TAB));
-    // TASK_DATA (tarefas do painel)
-    localStorage.setItem(LS+'TASK_DATA', JSON.stringify(TASK_DATA));
-    // Calendário — salvar apenas blocos não-fixos
-    const calSave={};
-    for(let d=0;d<7;d++){
-      calSave[d]={};
-      Object.entries(calState[d]).forEach(([si,bd])=>{
-        if(bd&&!bd.fixed) calSave[d][si]=bd;
-      });
-    }
-    localStorage.setItem(LS+'calState', JSON.stringify(calSave));
-    // Overlays
-    localStorage.setItem(LS+'overlays', JSON.stringify(overlays));
-    // weekStore backup
-    localStorage.setItem(LS+'weekStore', JSON.stringify(weekStore));
-    localStorage.setItem(LS+'hiddenSlots', JSON.stringify([...hiddenTimeRanges]));
-  } catch(e){ console.warn('Erro ao salvar:', e); }
+  // Supabase é a fonte da verdade — localStorage é só cache de startup
+  // Não há lógica de timestamp: o Supabase sempre ganha ao carregar
+  try{ localStorage.setItem(LS+'cache', buildSnapshot()); } catch(e){}
 }
 
 function loadState(){
+  // Aplicar cache do localStorage para startup rápido (será sobrescrito pelo Supabase)
   try{
-    const cc=localStorage.getItem(LS+'clChecked');
-    if(cc){ Object.assign(clChecked, JSON.parse(cc)); }
-
-    const td=localStorage.getItem(LS+'taskDoneState');
-    if(td){ Object.assign(taskDoneState, JSON.parse(td)); }
-
-    const st=localStorage.getItem(LS+'scheduledTasks');
-    if(st){ JSON.parse(st).forEach(id=>scheduledTasks.add(id)); }
-
-    const cats=localStorage.getItem(LS+'CATEGORIES');
-    if(cats){ CATEGORIES.length=0; JSON.parse(cats).forEach(c=>CATEGORIES.push(c)); }
-
-    const co=localStorage.getItem(LS+'cardOrder');
-    if(co){ Object.assign(cardOrder, JSON.parse(co)); }
-
-    const cdbt=localStorage.getItem(LS+'CARD_DEFS_BY_TAB');
-    if(cdbt){
-      const loaded=JSON.parse(cdbt);
-      Object.keys(loaded).forEach(tab=>{ CARD_DEFS_BY_TAB[tab]=loaded[tab]; });
-    }
-
-    const tdata=localStorage.getItem(LS+'TASK_DATA');
-    if(tdata){
-      const loaded=JSON.parse(tdata);
-      Object.keys(loaded).forEach(tab=>{ TASK_DATA[tab]=loaded[tab]; });
-    }
-
-    // Blocos do calendário
-    const cs=localStorage.getItem(LS+'calState');
-    if(cs){
-      const loaded=JSON.parse(cs);
-      // Support both old format (d=0..6) and new format (wk=weekOffset)
-      const firstKey=Object.keys(loaded)[0];
-      if(firstKey&&isNaN(firstKey)){
-        // New format: weekStore
-        Object.keys(loaded).forEach(wk=>{
-          weekStore[wk]={};
-          for(let d=0;d<7;d++){
-            weekStore[wk][d]={};
-            Object.entries(loaded[wk]?.[d]||{}).forEach(([si,bd])=>{ weekStore[wk][d][parseInt(si)]=bd; });
-          }
-        });
-        loadWeek(weekOffset);
-      } else {
-        // Old format: just load into current week
-        Object.keys(loaded).forEach(d=>{
-          Object.entries(loaded[d]).forEach(([si,bd])=>{ calState[d][parseInt(si)]=bd; });
-        });
-      }
-    }
-
-    // Overlays
-    const ov=localStorage.getItem(LS+'overlays');
-    if(ov){
-      const loaded=JSON.parse(ov);
-      Object.keys(loaded).forEach(k=>{ overlays[k]=loaded[k]; });
-    }
-    // weekStore
-    const hs=localStorage.getItem(LS+'hiddenSlots');
-    if(hs) JSON.parse(hs).forEach(k=>hiddenTimeRanges.add(k));
-    const ws=localStorage.getItem(LS+'weekStore');
-    if(ws){
-      const loaded=JSON.parse(ws);
-      Object.keys(loaded).forEach(wk=>{ weekStore[wk]=loaded[wk]; });
-    }
-  } catch(e){ console.warn('Erro ao carregar:', e); }
+    const raw = localStorage.getItem(LS+'cache');
+    if(raw){ applySnapshot(JSON.parse(raw)); }
+  } catch(e){ console.warn('cache load error:', e); }
 }
 
-// Carregar localStorage como fallback imediato
+// 1. Aplicar cache imediato para startup rápido (Supabase vai sobrescrever)
 loadState();
-// Re-renderizar com dados carregados
 renderCal();renderPicker();renderSidebarCats();
-// Restore sidebar expanded state
 try{
   if(localStorage.getItem('sbExpanded')==='1'){
     sidebarExpanded=true;
@@ -7500,43 +7407,13 @@ try{
     document.documentElement.style.setProperty('--sb-w','210px');
   }
 }catch(e){}
-setTimeout(()=>{const nb=document.getElementById('tab-nutricao');if(nb)switchView('nutricao',nb);},200);updateSidebarWidgets();populateTimeSelects();
-// Carregar dados da nuvem (sobrescreve localStorage)
+setTimeout(()=>{const nb=document.getElementById('tab-nutricao');if(nb)switchView('nutricao',nb);},200);
+updateSidebarWidgets();populateTimeSelects();
+// 2. Carregar do Supabase — SEMPRE sobrescreve (fonte da verdade)
 setTimeout(()=>loadFromAppsScript(), 300);
 
-// Auto-salvar em qualquer interação relevante —
-// interceptar as funções que mudam estado
-const _save=saveState;
-['clToggleNew','taskDoneState','scheduledTasks'].forEach(()=>{});
-
-// Salvar ao fechar/recarregar a página
+// Salvar ao fechar (cache local)
 window.addEventListener('beforeunload', saveState);
-// Salvar automaticamente a cada 10 segundos
-setInterval(saveState, 10000);
-
-// Patch: salvar após cada ação de checklist, tarefa, categoria
-const _patchFns=['clToggleNew','deleteCard','renameCard','deleteTask_cl','renameTask',
-  'addTabTask','addTabCategory','deleteCategory','addSidebarTask',
-  'deleteSidebarTask','editSidebarTask','deleteTask','editTask',
-  'pick','dupBlock'];
-
-_patchFns.forEach(name=>{
-  const orig=window[name];
-  if(typeof orig==='function'){
-    window[name]=function(...args){
-      const result=orig.apply(this,args);
-      setTimeout(saveState,100);
-      return result;
-    };
-  }
-});
-
-// Salvar quando check de tarefa do painel muda
-const _origRenderTaskPanel=renderTaskPanel;
-window.renderTaskPanel=function(...args){
-  _origRenderTaskPanel.apply(this,args);
-  setTimeout(saveState,100);
-};
 
 // Botão para limpar tudo (útil para debug)
 function clearSavedState(){
@@ -7664,26 +7541,12 @@ function applySnapshot(snap){
   if(snap.hiddenTimeRanges) snap.hiddenTimeRanges.forEach(k=>hiddenTimeRanges.add(k));
   if(snap.nutState){
     const sn=snap.nutState;
-    // Capturar campos transientes de hoje do nutState ATUAL (já carregado do localStorage)
-    const todayKey=nutTodayKey();
-    const localIsToday=nutState.lastDate===todayKey;
-    const savedToday={
-      foods:nutState.foods||[], vit:nutState.vit||{},
-      waterChecks:nutState.waterChecks||0, sleep:nutState.sleep||'',
-      kgToday:nutState.kgToday||'', exToday:nutState.exToday||'',
-      kerToday:nutState.kerToday||'',
-    };
-    // Mesclar days (cloud ganha sobre seed do HTML, mas localStorage de hoje preservado)
+    // Mesclar days: Supabase ganha sobre seed do HTML
     const merged={};
     nutState.days.forEach(d=>merged[d.date]=d);
     (sn.days||[]).forEach(d=>merged[d.date]=d);
     Object.assign(nutState, sn);
     nutState.days=Object.values(merged).sort((a,b)=>a.date.localeCompare(b.date));
-    // Restaurar campos transientes de hoje se o localStorage tinha dados de hoje
-    if(localIsToday){
-      Object.assign(nutState, savedToday);
-      nutState.lastDate=todayKey;
-    }
     nutPersist();
   }
   if(snap.nutUI){
@@ -7707,36 +7570,28 @@ async function loadFromAppsScript(){
     const rows = await resp.json();
 
     if(!rows || rows.length === 0 || !rows[0].value){
-      // Supabase está vazio — salvar o estado local pra nuvem
+      // Supabase vazio — subir o estado atual
       showSyncStatus('idle');
       syncToAppsScript();
       return;
     }
 
+    // Supabase é sempre a fonte da verdade — aplicar sempre
     const snap = JSON.parse(rows[0].value);
-    const cloudTs = snap.ts || 0;
-
-    // Comparar com timestamp do localStorage
-    const localTs = parseInt(localStorage.getItem(LS+'syncTs')||'0');
-
-    if(localTs > cloudTs){
-      // localStorage é mais recente — subir pro Supabase e NÃO sobrescrever local
-      console.log('[sync] local mais recente ('+new Date(localTs).toISOString()+') vs cloud ('+new Date(cloudTs).toISOString()+') — subindo local');
-      showSyncStatus('ok');
-      syncToAppsScript(); // push local → cloud
-    } else {
-      // Supabase é mais recente (ou igual) — aplicar
-      console.log('[sync] aplicando cloud snapshot ts='+new Date(cloudTs).toISOString());
-      applySnapshot(snap);
-      localStorage.setItem(LS+'syncTs', cloudTs);
-      showSyncStatus('ok');
-      renderCal();
-      renderSidebarCats();
-      renderTaskPanelForKey('semana');
-      renderPicker();
+    applySnapshot(snap);
+    showSyncStatus('ok');
+    renderCal();
+    renderSidebarCats();
+    renderTaskPanelForKey(currentSidebarKey||'semana');
+    renderPicker();
+    // Re-render nutrition if active
+    if(window._nutInited){
+      nutRenderWelcomeDate();nutRenderWater();nutRenderVitamins();
+      nutRenderMetrics();nutRenderFoodList();nutRenderDailyProgress();
+      nutRenderWeekRings();nutRenderRightCol();
     }
   } catch(e){
-    console.warn('Supabase load failed, using localStorage:', e);
+    console.warn('Supabase load failed, using cache:', e);
     showSyncStatus('idle');
   }
 }
@@ -7745,12 +7600,12 @@ var syncToSheetDB = syncToAppsScript;
 var loadFromSheetDB = loadFromAppsScript;
 
 
-// Debounced auto-sync on every saveState call
+// Cada saveState → cache local + sync Supabase debounced
 const _origSaveState = saveState;
 window.saveState = function(){
-  _origSaveState();
+  _origSaveState(); // salva cache local
   clearTimeout(_syncTimeout);
-  _syncTimeout = setTimeout(syncToSheetDB, 500);
+  _syncTimeout = setTimeout(syncToSheetDB, 800); // sync Supabase
 };
 
 
