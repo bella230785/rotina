@@ -4739,18 +4739,12 @@ function taskItemHTML(t,isDone=false,isScheduled=false){
 
 // ── TASK PANEL DRAG REORDER ──────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════
-// TASK PANEL DRAG & DROP — reescrito do zero para ser confiável
-// Dois modos mutuamente exclusivos: TASK drag e CAT drag
+// TASK PANEL DRAG & DROP
 // ═══════════════════════════════════════════════════════════════════
 
-// Estado único
-const _tp = {
-  taskId: null,   // id da tarefa sendo arrastada
-  catId: null,    // id da categoria sendo arrastada
-  wasDrag: false, // previne click após drag
-};
+const _tp = { taskId:null, catId:null, wasDrag:false };
 
-// ── Utilidade: encontrar tarefa em todos os stores ──────────────
+// ── Encontrar tarefa em qualquer store ──────────────────────────
 function tpFindTask(id){
   for(const arr of [TASK_DATA.semana, TASK_DATA.mes, TASK_DATA.nexus]){
     const t = arr.find(t => t.id === id);
@@ -4765,68 +4759,71 @@ function tpFindTask(id){
   return null;
 }
 
-// ── Utilidade: mover tarefa para um card alvo ───────────────────
+// ── Encontrar card pelo catId ───────────────────────────────────
+function tpFindCard(catId){
+  for(const cards of Object.values(CARD_DEFS_BY_TAB)){
+    const c = cards.find(c => c.id === catId);
+    if(c) return c;
+  }
+  return null;
+}
+
+// ── Normalizar tarefa para formato do card destino ──────────────
+function tpNormalizeTask(raw, targetCatId, asCard){
+  if(asCard){
+    return {
+      id:raw.id, l:raw.label||raw.l||'', n:raw.note||raw.n||'',
+      due:raw.due||'', alarm:raw.alarm||'', time:raw.time||'',
+      duration:raw.duration||'', priority:raw.priority||4,
+      subtasks:raw.subtasks||[], catId:targetCatId,
+    };
+  } else {
+    return {
+      id:raw.id, label:raw.l||raw.label||'', note:raw.n||raw.note||'',
+      catId:targetCatId, due:raw.due||'', alarm:raw.alarm||'',
+      time:raw.time||'', duration:raw.duration||'',
+      priority:raw.priority||4, subtasks:raw.subtasks||[],
+    };
+  }
+}
+
+// ── Mover tarefa para outra categoria ──────────────────────────
+// beforeTaskId: inserir antes desta tarefa (null = append no final)
 function tpMoveTaskToCard(taskId, targetCatId, beforeTaskId=null){
+  // 1. Encontrar e remover da origem
   const fromInfo = tpFindTask(taskId);
   if(!fromInfo) return false;
-
-  // Encontrar card destino
-  let targetCard = null;
-  for(const cards of Object.values(CARD_DEFS_BY_TAB)){
-    const c = cards.find(c => c.id === targetCatId);
-    if(c){ targetCard = c; break; }
-  }
-
-  // Remover da origem
   const fi = fromInfo.store.findIndex(t => t.id === taskId);
   if(fi < 0) return false;
   const [raw] = fromInfo.store.splice(fi, 1);
 
-  // Normalizar formato para o destino
-  let task;
+  // 2. Encontrar destino e inserir
+  const targetCard = tpFindCard(targetCatId);
   if(targetCard){
-    // destino é CARD_DEFS
-    task = {
-      id: raw.id,
-      l: raw.label || raw.l || '',
-      n: raw.note || raw.n || '',
-      due: raw.due||'', alarm: raw.alarm||'', time: raw.time||'',
-      duration: raw.duration||'', priority: raw.priority||4,
-      subtasks: raw.subtasks||[], catId: targetCatId,
-    };
-    if(beforeTaskId){
+    const task = tpNormalizeTask(raw, targetCatId, true);
+    if(beforeTaskId !== null){
       const bi = targetCard.tasks.findIndex(t => t.id === beforeTaskId);
-      if(bi >= 0) targetCard.tasks.splice(bi, 0, task);
-      else targetCard.tasks.push(task);
+      targetCard.tasks.splice(bi >= 0 ? bi : targetCard.tasks.length, 0, task);
     } else {
       targetCard.tasks.push(task);
     }
   } else {
-    // destino é TASK_DATA (categoria flat)
-    task = {
-      id: raw.id,
-      label: raw.l || raw.label || '',
-      note: raw.n || raw.note || '',
-      catId: targetCatId,
-      due: raw.due||'', alarm: raw.alarm||'', time: raw.time||'',
-      duration: raw.duration||'', priority: raw.priority||4,
-      subtasks: raw.subtasks||[],
-    };
-    if(beforeTaskId){
-      const ti = TASK_DATA[currentTaskTab].findIndex(t => t.id === beforeTaskId);
-      if(ti >= 0) TASK_DATA[currentTaskTab].splice(ti, 0, task);
-      else TASK_DATA[currentTaskTab].push(task);
+    // Destino é TASK_DATA flat
+    const task = tpNormalizeTask(raw, targetCatId, false);
+    const allFlat = TASK_DATA[currentTaskTab];
+    if(beforeTaskId !== null){
+      const bi = allFlat.findIndex(t => t.id === beforeTaskId);
+      allFlat.splice(bi >= 0 ? bi : allFlat.length, 0, task);
     } else {
-      TASK_DATA[currentTaskTab].push(task);
+      allFlat.push(task);
     }
   }
 
-  // Atualizar catId em TASK_DATA refs
+  // 3. Atualizar catId em TASK_DATA refs
   ['semana','mes','nexus'].forEach(tab => {
     const t = TASK_DATA[tab].find(t => t.id === taskId);
     if(t) t.catId = targetCatId;
   });
-
   return true;
 }
 
@@ -4843,7 +4840,6 @@ function tpClearIndicators(){
   });
 }
 
-// ── Re-renderizar após qualquer drag ───────────────────────────
 function tpRerender(){
   tpClearIndicators();
   if(currentFilterCat) filterTasksBy(currentFilterCat);
@@ -4856,8 +4852,7 @@ function tpRerender(){
 // ════════════════════════════════════════════════════════════════
 
 function tpDragStart(e, el){
-  if(dragSrc) return; // não interferir com drag do calendário
-  if(_tp.catId) return; // categoria está sendo arrastada
+  if(dragSrc || _tp.catId) return;
   _tp.taskId = el.dataset.taskid;
   _tp.wasDrag = true;
   e.dataTransfer.setData('text/plain', _tp.taskId);
@@ -4865,76 +4860,83 @@ function tpDragStart(e, el){
   setTimeout(() => el.style.opacity = '.35', 0);
 }
 
-// Drag sobre outra tarefa (reordenar)
+// Sobre outra tarefa — mostrar indicador de posição
 function tpDragOver(e, el){
   if(!_tp.taskId || _tp.taskId === el.dataset.taskid) return;
   e.preventDefault();
   e.stopPropagation();
-  tpClearIndicators();
-  // Restaurar opacidade do item arrastado
-  const draggingEl = document.querySelector('.task-item[data-taskid="'+_tp.taskId+'"]');
-  if(draggingEl) draggingEl.style.opacity = '.35';
+  document.querySelectorAll('.task-item').forEach(i => i.style.borderTop = '');
+  document.querySelectorAll('.tp-cat-group').forEach(g => g.style.outline = '');
+  const dragging = document.querySelector(`.task-item[data-taskid="${_tp.taskId}"]`);
+  if(dragging) dragging.style.opacity = '.35';
   el.style.borderTop = '2px solid var(--accent,#7C6FCD)';
 }
 
-// Drag sobre grupo/categoria (mover para categoria)
+// Sobre grupo vazio ou header — mostrar outline da categoria
 function tpGroupDragOver(e, el, catId){
   if(!_tp.taskId) return;
   e.preventDefault();
   e.stopPropagation();
-  tpClearIndicators();
-  const draggingEl = document.querySelector('.task-item[data-taskid="'+_tp.taskId+'"]');
-  if(draggingEl) draggingEl.style.opacity = '.35';
+  document.querySelectorAll('.task-item').forEach(i => i.style.borderTop = '');
+  document.querySelectorAll('.tp-cat-group').forEach(g => g.style.outline = '');
+  const dragging = document.querySelector(`.task-item[data-taskid="${_tp.taskId}"]`);
+  if(dragging) dragging.style.opacity = '.35';
   el.style.outline = '2px dashed var(--accent,#7C6FCD)';
   el.style.outlineOffset = '-2px';
 }
 
-// Soltar sobre outra tarefa (reordenar na mesma categoria ou mover)
+// Soltar sobre outra tarefa
 function tpDrop(e, el){
   e.stopPropagation();
   e.preventDefault();
-  if(!_tp.taskId || _tp.taskId === el.dataset.taskid){ _tp.taskId=null; tpClearIndicators(); return; }
-
-  const toId = el.dataset.taskid;
-  const toCatId = el.dataset.catid || '';
-  const fromInfo = tpFindTask(_tp.taskId);
-  const toInfo = tpFindTask(toId);
   const draggedId = _tp.taskId;
   _tp.taskId = null;
+  if(!draggedId || draggedId === el.dataset.taskid){ tpClearIndicators(); return; }
 
+  const toId    = el.dataset.taskid;
+  const toCatId = el.dataset.catid || '';
+
+  // Ler infos ANTES de modificar qualquer array
+  const fromInfo = tpFindTask(draggedId);
+  const toInfo   = tpFindTask(toId);
   if(!fromInfo || !toInfo){ tpRerender(); return; }
 
-  if(fromInfo.store === toInfo.store){
-    // Mesma lista: reordenar
+  const fromCatId = fromInfo.storeType === 'card' ? fromInfo.card.id : (fromInfo.task.catId||'');
+  const realToCatId = toInfo.storeType === 'card' ? toInfo.card.id : (toInfo.task.catId || toCatId);
+
+  if(fromCatId === realToCatId){
+    // ── Mesma categoria: reordenar ───────────────────────────
     const arr = fromInfo.store;
     const fi = arr.findIndex(t => t.id === draggedId);
     const ti = arr.findIndex(t => t.id === toId);
     if(fi >= 0 && ti >= 0 && fi !== ti){
       const [m] = arr.splice(fi, 1);
-      arr.splice(arr.findIndex(t => t.id === toId), 0, m);
+      // Recalcular ti após splice
+      const newTi = arr.findIndex(t => t.id === toId);
+      arr.splice(newTi, 0, m);
     }
   } else {
-    // Lista diferente: mover para a categoria do item destino
-    tpMoveTaskToCard(draggedId, toCatId || toInfo.card?.id || '', toId);
+    // ── Categoria diferente: mover ───────────────────────────
+    tpMoveTaskToCard(draggedId, realToCatId, toId);
   }
   tpRerender();
 }
 
-// Soltar sobre grupo/categoria (mover para essa categoria)
+// Soltar sobre grupo/categoria vazia
 function tpGroupDrop(e, el, catId){
   e.preventDefault();
   e.stopPropagation();
-  if(!_tp.taskId){ tpClearIndicators(); return; }
   const draggedId = _tp.taskId;
   _tp.taskId = null;
+  if(!draggedId){ tpClearIndicators(); return; }
   tpMoveTaskToCard(draggedId, catId);
   tpRerender();
 }
 
 // ════════════════════════════════════════════════════════════════
-// DRAG DE CATEGORIA (subcategoria)
+// DRAG DE CATEGORIA
 // ════════════════════════════════════════════════════════════════
-let _tpCatDragId = null; // mantido para compatibilidade com HTML inline
+let _tpCatDragId = null;
 
 function tpCatDragStart(e, catId){
   if(_tp.taskId) return;
@@ -4943,7 +4945,7 @@ function tpCatDragStart(e, catId){
   e.dataTransfer.setData('text/plain', 'cat:'+catId);
   e.dataTransfer.effectAllowed = 'move';
   setTimeout(() => {
-    const el = document.querySelector('.tp-cat-group[data-catid="'+catId+'"]');
+    const el = document.querySelector(`.tp-cat-group[data-catid="${catId}"]`);
     if(el) el.style.opacity = '.35';
   }, 0);
 }
@@ -4954,21 +4956,26 @@ function tpCatDragEnd(e){
   tpClearIndicators();
 }
 
+// Drag do header da categoria sobre outro grupo — mostrar indicador
 function tpCatDragOver(e, hdr, catId){
   if(!_tp.catId || _tp.catId === catId) return;
   e.preventDefault();
   e.stopPropagation();
-  tpClearIndicators();
-  const draggingEl = document.querySelector('.tp-cat-group[data-catid="'+_tp.catId+'"]');
-  if(draggingEl) draggingEl.style.opacity = '.35';
+  // Limpar todos, manter só o dragging opaco e o alvo marcado
+  document.querySelectorAll('.tp-cat-group').forEach(g => {
+    g.style.borderTop = '';
+    g.style.opacity = g.dataset.catid === _tp.catId ? '.35' : '';
+  });
   const group = hdr.closest('.tp-cat-group');
   if(group) group.style.borderTop = '2px solid var(--accent,#7C6FCD)';
 }
 
 function tpCatDragLeave(hdr){
-  // não fazer nada — tpCatDragOver já limpa tudo
+  const group = hdr.closest('.tp-cat-group');
+  if(group) group.style.borderTop = '';
 }
 
+// Soltar categoria sobre outra categoria
 function tpCatDrop(e, hdr, targetCatId){
   e.preventDefault();
   e.stopPropagation();
@@ -4976,48 +4983,35 @@ function tpCatDrop(e, hdr, targetCatId){
   _tp.catId = null;
   _tpCatDragId = null;
   tpClearIndicators();
-
   if(!fromCatId || fromCatId === targetCatId) return;
 
-  // Reordenar em CARD_DEFS_BY_TAB — buscar o tab que contém ambos
-  let reordered = false;
+  // ── Reordenar em CARD_DEFS_BY_TAB ─────────────────────────
+  // Estratégia: percorrer TODOS os tabs, encontrar o tab de cada um
+  let fromTabId=null, toTabId=null;
   for(const [tabId, cards] of Object.entries(CARD_DEFS_BY_TAB)){
-    const fi = cards.findIndex(c => c.id === fromCatId);
-    const ti = cards.findIndex(c => c.id === targetCatId);
-    if(fi >= 0 && ti >= 0){
-      const [moved] = cards.splice(fi, 1);
-      // Recalcular ti após splice
-      const newTi = cards.findIndex(c => c.id === targetCatId);
-      cards.splice(newTi, 0, moved);
-      reordered = true;
-      break;
+    if(cards.some(c => c.id === fromCatId)) fromTabId = tabId;
+    if(cards.some(c => c.id === targetCatId)) toTabId = tabId;
+  }
+
+  if(fromTabId && toTabId){
+    const fromCards = CARD_DEFS_BY_TAB[fromTabId];
+    const toCards   = CARD_DEFS_BY_TAB[toTabId];
+    const fi = fromCards.findIndex(c => c.id === fromCatId);
+    if(fi >= 0){
+      const [movedCard] = fromCards.splice(fi, 1);
+      // Inserir antes de targetCatId na lista de destino
+      const ti = toCards.findIndex(c => c.id === targetCatId);
+      toCards.splice(ti >= 0 ? ti : toCards.length, 0, movedCard);
     }
   }
 
-  // Se não achou no mesmo tab, tentar mover entre tabs diferentes
-  if(!reordered){
-    // Encontrar tab de origem e de destino
-    let fromTab=null, fromCards=null, fromCard=null;
-    let toTab=null, toCards=null;
-    for(const [tabId, cards] of Object.entries(CARD_DEFS_BY_TAB)){
-      const f = cards.find(c => c.id === fromCatId);
-      if(f){ fromTab=tabId; fromCards=cards; fromCard=f; }
-      const t = cards.find(c => c.id === targetCatId);
-      if(t){ toTab=tabId; toCards=cards; }
-    }
-    if(fromCards && toCards && fromCard){
-      fromCards.splice(fromCards.indexOf(fromCard), 1);
-      const newTi = toCards.findIndex(c => c.id === targetCatId);
-      toCards.splice(newTi, 0, fromCard);
-    }
-  }
-
-  // Também reordenar em CATEGORIES (sidebar)
+  // ── Reordenar em CATEGORIES (sidebar) ─────────────────────
   const ci = CATEGORIES.findIndex(c => c.id === fromCatId);
   const ct = CATEGORIES.findIndex(c => c.id === targetCatId);
   if(ci >= 0 && ct >= 0){
-    const [moved] = CATEGORIES.splice(ci, 1);
-    CATEGORIES.splice(CATEGORIES.findIndex(c => c.id === targetCatId), 0, moved);
+    const [movedCat] = CATEGORIES.splice(ci, 1);
+    const newCt = CATEGORIES.findIndex(c => c.id === targetCatId);
+    CATEGORIES.splice(newCt >= 0 ? newCt : CATEGORIES.length, 0, movedCat);
   }
 
   tpRerender();
