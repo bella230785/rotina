@@ -3834,13 +3834,13 @@ function renderTaskPanelByCats(allTasks, title, addCatId){
     return arr.filter(t=>passesFilter(t));
   }
 
-  // Collect catIds from tasks PLUS any empty cards from the current tab
-  // (so newly created empty subcategories also appear)
+  // Collect catIds from tasks PLUS empty cards from the current tab
+  // IMPORTANT: copy the array to avoid mutating CAT_TAB_MAP
   const taskCatIds=[...new Set(allTasks.map(t=>t.catId||'_'))];
   const tabCards=[];
-  // Find which tabs are being shown for this render
-  const shownTabs=CAT_TAB_MAP[currentSidebarKey]||[];
-  if(CARD_DEFS_BY_TAB[currentSidebarKey]) shownTabs.push(currentSidebarKey);
+  const shownTabs=[...(CAT_TAB_MAP[currentSidebarKey]||[])]; // copy!
+  if(CARD_DEFS_BY_TAB[currentSidebarKey]&&!shownTabs.includes(currentSidebarKey))
+    shownTabs.push(currentSidebarKey);
   shownTabs.forEach(tabId=>{
     (CARD_DEFS_BY_TAB[tabId]||[]).forEach(card=>{
       if(!taskCatIds.includes(card.id)) tabCards.push(card.id);
@@ -3856,7 +3856,6 @@ function renderTaskPanelByCats(allTasks, title, addCatId){
     const pending=filterView(sortTasks(pendingByCat[cid]||[]));
     const sched=scheduledByCat[cid]||[];
     const done=doneByCat[cid]||[];
-    // Only skip if truly not in any tab AND has no tasks (keeps empty subcats visible)
     if(!pending.length&&!sched.length&&!done.length&&!tabCards.includes(cid)) return;
 
     const _collapsed=collapsedCats.has(cid);
@@ -3870,7 +3869,11 @@ function renderTaskPanelByCats(allTasks, title, addCatId){
         ondragleave="tpCatDragLeave(this)"
         ondrop="tpCatDrop(event,this,'${cid}')">
         <span class="tp-cat-group-dot" style="background:${cat.bg};cursor:pointer;" onclick="event.stopPropagation();openCatColorPicker('${cid}',event)" title="Mudar cor"></span>
-        <span class="tp-cat-group-name" style="text-transform:lowercase;flex:1;" onclick="toggleCatGroup('${cid}')">${cat.name}</span>
+        <span class="tp-cat-group-name" style="text-transform:lowercase;flex:1;cursor:pointer;"
+          onclick="toggleCatGroup('${cid}')"
+          ondblclick="event.stopPropagation();tpRenameCard('${cid}',this)"
+          oncontextmenu="event.preventDefault();tpRenameCard('${cid}',this)"
+        >${cat.name}</span>
         <button onclick="event.stopPropagation();tpInlineAddSubcat('${cid}',this)"
           title="Nova subcategoria"
           style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--g300);padding:0 4px;line-height:1;transition:color .1s;"
@@ -5089,6 +5092,47 @@ function tpAddSubcat(parentCatId, nameArg){
   else renderTaskPanelForKey(snapKey);
   saveState();
   if(typeof renderChecklist==='function') renderChecklist(targetTabId,'cl-wrap-'+targetTabId);
+}
+
+function tpRenameCard(catId, el){
+  // Find the card in CARD_DEFS_BY_TAB
+  let card=null;
+  for(const cards of Object.values(CARD_DEFS_BY_TAB)){
+    const c=cards.find(c=>c.id===catId);
+    if(c){ card=c; break; }
+  }
+  // Also check CATEGORIES (top-level)
+  const catEntry=CATEGORIES.find(c=>c.id===catId);
+
+  const orig=el.textContent.trim();
+  el.setAttribute('contenteditable','true');
+  el.style.outline='none';
+  el.style.borderBottom='1px solid var(--accent)';
+  el.style.minWidth='60px';
+  el.focus();
+  // Select all text
+  const range=document.createRange();
+  range.selectNodeContents(el);
+  window.getSelection().removeAllRanges();
+  window.getSelection().addRange(range);
+
+  function save(){
+    el.removeAttribute('contenteditable');
+    el.style.borderBottom='';
+    const v=el.textContent.trim()||orig;
+    el.textContent=v;
+    if(v===orig) return;
+    if(card) card.title=v;
+    if(catEntry) catEntry.name=v;
+    renderSidebarCats();
+    saveState();
+  }
+  el.onblur=save;
+  el.onkeydown=e=>{
+    if(e.key==='Enter'){e.preventDefault();el.blur();}
+    if(e.key==='Escape'){el.textContent=orig;el.blur();}
+  };
+  el.onclick=e=>e.stopPropagation(); // don't collapse/expand while editing
 }
 
 function tpInlineEditLabel(id, el){
