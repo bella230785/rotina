@@ -3847,7 +3847,7 @@ function renderTaskPanelByCats(allTasks, title, addCatId){
 
     const _collapsed=collapsedCats.has(cid);
     const _doneHidden=collapsedDone.has(cid);
-    html+=`<div class="tp-cat-group" data-catid="${cid}">
+    html+=`<div class="tp-cat-group" data-catid="${cid}" ondragover="tpGroupDragOver(event,this,'${cid}')" ondrop="tpGroupDrop(event,this,'${cid}')" ondragleave="this.style.outline=''">
       <div class="tp-cat-group-hdr" style="cursor:grab;user-select:none;"
         draggable="true"
         ondragstart="tpCatDragStart(event,'${cid}')"
@@ -4156,10 +4156,10 @@ function renderTaskPanelForKey(key, filterCatId=null){
     return;
   } else if(map.mode==='checklist'){
     // Delegate to filterTasksBy for consistent data (includes TASK_DATA)
-    if(CAT_TAB_MAP[key]){
-      filterTasksBy(key);
-      return;
-    }
+    // Always delegate — CAT_TAB_MAP covers all known tabs
+    filterTasksBy(key);
+    return;
+    if(false&&CAT_TAB_MAP[key]){
     title=map.label.toLowerCase();
     addCatId=null;
     const defs=CARD_DEFS_BY_TAB[map.tabId]||[];
@@ -4585,8 +4585,11 @@ function filterTasksBy(catId){
   const tabs=CAT_TAB_MAP[catId]||[];
   const cat=CATEGORIES.find(c=>c.id===catId);
 
+  // Always also check if catId itself is a tabId key (dynamic tabs)
+  if(CARD_DEFS_BY_TAB[catId] && !tabs.includes(catId)) tabs.push(catId);
+
   if(tabs.length>0){
-    // Top-level category: collect ALL tasks from its tabs' cards
+    // Top-level category: collect ALL tasks from its tabs' cards (including dynamic)
     tabs.forEach(tabId=>{
       const defs=CARD_DEFS_BY_TAB[tabId]||[];
       defs.forEach(card=>{
@@ -4611,16 +4614,35 @@ function filterTasksBy(catId){
         priority:t.priority||4,subtasks:t.subtasks||[]});
     });
   } else {
-    // User-created or unknown category: search everywhere
-    Object.values(CARD_DEFS_BY_TAB).flat().forEach(card=>{
-      if(card.id!==catId) return;
-      card.tasks.forEach(t=>allTasks.push({
-        id:t.id,label:t.l||'',note:stripHTML(t.n||''),catId:card.id,
+    // User-created or unknown category: search everywhere in CARD_DEFS_BY_TAB
+    // Also collect all tasks from ALL cards in the tab that the catId belongs to
+    // (so newly created subcats show up under their parent category filter)
+    const parentTabId = Object.keys(CARD_DEFS_BY_TAB).find(tid=>{
+      const c=(CARD_DEFS_BY_TAB[tid]||[]).find(c=>c.id===catId);
+      return !!c;
+    }) || catId;
+    const tabCards = CARD_DEFS_BY_TAB[parentTabId] || [];
+    // Show only the matching card's tasks (single subcat view)
+    const matchCard = tabCards.find(c=>c.id===catId);
+    if(matchCard){
+      matchCard.tasks.forEach(t=>allTasks.push({
+        id:t.id,label:t.l||'',note:stripHTML(t.n||''),catId:matchCard.id,
         due:t.due||'',alarm:t.alarm||'',time:t.time||'',duration:t.duration||'',
         priority:t.priority||4,subtasks:t.subtasks||[],
-        _bg:card.iconBg,_color:card.color
+        _bg:matchCard.iconBg,_color:matchCard.color
       }));
-    });
+    } else {
+      // Fallback: search all cards
+      Object.values(CARD_DEFS_BY_TAB).flat().forEach(card=>{
+        if(card.id!==catId) return;
+        card.tasks.forEach(t=>allTasks.push({
+          id:t.id,label:t.l||'',note:stripHTML(t.n||''),catId:card.id,
+          due:t.due||'',alarm:t.alarm||'',time:t.time||'',duration:t.duration||'',
+          priority:t.priority||4,subtasks:t.subtasks||[],
+          _bg:card.iconBg,_color:card.color
+        }));
+      });
+    }
     [...TASK_DATA.semana,...TASK_DATA.mes,...(TASK_DATA.nexus||[])].forEach(t=>{
       if(t.catId===catId) allTasks.push({
         id:t.id,label:t.label,note:t.note||'',catId:t.catId,
@@ -4715,11 +4737,12 @@ function taskItemHTML(t,isDone=false,isScheduled=false){
       ondragstart="tpDragStart(event,this)"
       ondragover="tpDragOver(event,this)"
       ondrop="tpDrop(event,this)"
+      ondragend="this.style.opacity='';this.style.borderTop='';_tpDragId=null;setTimeout(()=>_tpWasDragging=false,100)"
       ondragleave="this.style.borderTop=''">
     <div class="task-cb${d?' checked':''}" style="${p===1?'border-color:#f87171':p===2?'border-color:#fbbf24':''}"
       onclick="event.stopPropagation();toggleTaskDone('${t.id}')"></div>
-    <div class="task-item-body" ondblclick="openTaskDetail('${t.id}')" style="cursor:default">
-      <div class="task-item-label">${t.label||''}</div>
+    <div class="task-item-body" onclick="if(_tpWasDragging)return;event.stopPropagation();openTaskDetail('${t.id}')" style="cursor:pointer">
+      <div class="task-item-label" ondblclick="event.stopPropagation();tpInlineEditLabel('${t.id}',this)">${t.label||''}</div>
       ${metaParts.length?`<div class="task-item-meta">${metaParts.join('')}</div>`:''}
     </div>
     <div class="task-item-actions">
@@ -4733,9 +4756,11 @@ function taskItemHTML(t,isDone=false,isScheduled=false){
 // ── TASK PANEL DRAG REORDER ──────────────────────────────────────────────────
 let _tpDragId=null;
 
+let _tpWasDragging=false;
 function tpDragStart(e, el){
-  if(draggingTask||dragSrc) return; // don't interfere with calendar drag
+  if(dragSrc) return; // don't interfere with calendar drag
   _tpDragId=el.dataset.taskid;
+  _tpWasDragging=true;
   e.dataTransfer.setData('text/plain', _tpDragId);
   e.dataTransfer.effectAllowed='move';
   setTimeout(()=>el.style.opacity='.4',0);
@@ -4745,6 +4770,8 @@ function tpDragOver(e, el){
   if(!_tpDragId||_tpDragId===el.dataset.taskid) return;
   e.preventDefault();
   e.stopPropagation();
+  // Clear all other indicators
+  document.querySelectorAll('.task-item').forEach(i=>i.style.borderTop='');
   el.style.borderTop='2px solid var(--accent,#7C6FCD)';
 }
 
@@ -4815,14 +4842,92 @@ function tpDrop(e, el){
     else targetArr.push(moved);
   }
 
+  // Update CARD_DEFS catId for moved task
+  if(toCatId){
+    Object.values(CARD_DEFS_BY_TAB).forEach(cards=>{
+      cards.forEach(card=>{
+        const t=(card.tasks||[]).find(t=>t.id===(_tpDragId||'_NONE_'));
+        if(t) t.catId=toCatId;
+      });
+    });
+  }
   _tpDragId=null;
-  const _snapKey=currentSidebarKey; // snapshot before any re-render changes it
-  renderTaskPanelForKey(_snapKey);
+  document.querySelectorAll('.task-item').forEach(i=>i.style.borderTop='');
+  const _snapKey=currentSidebarKey;
+  if(currentFilterCat) filterTasksBy(currentFilterCat);
+  else renderTaskPanelForKey(_snapKey);
   saveState();
 }
 
 // ── SUBCATEGORY (card) DRAG REORDER ─────────────────────────────────────────
 let _tpCatDragId=null;
+
+function tpGroupDragOver(e, el, catId){
+  if(!_tpDragId) return;
+  e.preventDefault();
+  e.stopPropagation();
+  // Clear all group highlights, highlight just this one
+  document.querySelectorAll('.tp-cat-group').forEach(g=>{g.style.outline='';});
+  el.style.outline = '2px dashed var(--accent,#7C6FCD)';
+  el.style.outlineOffset = '-2px';
+}
+
+function tpGroupDrop(e, el, catId){
+  e.preventDefault();
+  e.stopPropagation();
+  el.style.outline = '';
+  if(!_tpDragId) return;
+
+  const fromInfo = tpFindTask(_tpDragId);
+  if(!fromInfo){ _tpDragId=null; return; }
+
+  // Find target card in CARD_DEFS_BY_TAB
+  let targetCard = null;
+  for(const cards of Object.values(CARD_DEFS_BY_TAB)){
+    const c = cards.find(c => c.id === catId);
+    if(c){ targetCard = c; break; }
+  }
+
+  const fromArr = fromInfo.store;
+  const fi = fromArr.findIndex(t => t.id === _tpDragId);
+  if(fi < 0){ _tpDragId=null; return; }
+  const [movedRaw] = fromArr.splice(fi, 1);
+
+  if(targetCard){
+    // Moving into a CARD_DEFS card
+    let moved = movedRaw;
+    if(fromInfo.storeType === 'flat'){
+      moved = {id:moved.id, l:moved.label||moved.l||'', n:moved.note||moved.n||'',
+        due:moved.due||'', alarm:moved.alarm||'', time:moved.time||'',
+        priority:moved.priority||4, subtasks:moved.subtasks||[]};
+    }
+    moved.catId = catId;
+    targetCard.tasks.push(moved);
+  } else {
+    // Moving into a TASK_DATA category
+    let moved = movedRaw;
+    if(fromInfo.storeType === 'card'){
+      moved = {id:moved.id, label:moved.l||moved.label||'', note:moved.n||moved.note||'',
+        catId, due:moved.due||'', alarm:moved.alarm||'', time:moved.time||'',
+        priority:moved.priority||4, subtasks:moved.subtasks||[]};
+    } else {
+      moved.catId = catId;
+    }
+    TASK_DATA[currentTaskTab].push(moved);
+  }
+
+  // Also update catId in TASK_DATA references
+  ['semana','mes','nexus'].forEach(tab => {
+    const t = TASK_DATA[tab].find(t => t.id === _tpDragId);
+    if(t) t.catId = catId;
+  });
+
+  _tpDragId = null;
+  document.querySelectorAll('.tp-cat-group').forEach(g=>{g.style.outline='';});
+  if(currentFilterCat) filterTasksBy(currentFilterCat);
+  else renderTaskPanelForKey(currentSidebarKey);
+  saveState();
+}
 
 function tpCatDragStart(e, catId){
   _tpCatDragId=catId;
@@ -4906,7 +5011,11 @@ function tpAddSubcat(parentCatId, nameArg){
     const tabs=CAT_TAB_MAP[parentCatId]||[];
     if(tabs.length) targetTabId=tabs[0];
   }
-  if(!targetTabId){ alert('Não foi possível determinar a aba.'); return; }
+  if(!targetTabId){
+    // Create a new CARD_DEFS_BY_TAB entry using the parentCatId as the tab
+    CARD_DEFS_BY_TAB[parentCatId] = CARD_DEFS_BY_TAB[parentCatId] || [];
+    targetTabId = parentCatId;
+  }
 
   const newId='sub_'+Date.now();
   // Simple emoji detection (first char)
@@ -4930,11 +5039,48 @@ function tpAddSubcat(parentCatId, nameArg){
 
   // Register in CAT_TAB_MAP so filterTasksBy can find it
   if(!CAT_TAB_MAP[targetTabId]) CAT_TAB_MAP[targetTabId]=[targetTabId];
+  // Also map parentCatId so its subcats are found
+  if(!CAT_TAB_MAP[parentCatId]) CAT_TAB_MAP[parentCatId]=[targetTabId];
+  else if(!CAT_TAB_MAP[parentCatId].includes(targetTabId)) CAT_TAB_MAP[parentCatId].push(targetTabId);
+  // Map the new subcat id too
+  if(!CAT_TAB_MAP[newId]) CAT_TAB_MAP[newId]=[targetTabId];
 
   const snapKey=currentSidebarKey;
-  renderTaskPanelForKey(snapKey);
+  // Re-render: if a filter is active use it, else re-render for key
+  if(currentFilterCat) filterTasksBy(currentFilterCat);
+  else renderTaskPanelForKey(snapKey);
   saveState();
   if(typeof renderChecklist==='function') renderChecklist(targetTabId,'cl-wrap-'+targetTabId);
+}
+
+function tpInlineEditLabel(id, el){
+  const orig=el.textContent.trim();
+  el.setAttribute('contenteditable','true');
+  el.style.outline='none';
+  el.style.borderBottom='1px solid var(--accent)';
+  el.focus();
+  // Move cursor to end
+  const range=document.createRange();range.selectNodeContents(el);range.collapse(false);
+  window.getSelection().removeAllRanges();window.getSelection().addRange(range);
+  function save(){
+    el.removeAttribute('contenteditable');
+    el.style.borderBottom='';
+    const v=el.textContent.trim()||orig;
+    if(v===orig) return;
+    // Update all stores
+    ['semana','mes','nexus'].forEach(tab=>{
+      const t=TASK_DATA[tab].find(x=>x.id===id);if(t){t.label=v;}
+    });
+    Object.values(CARD_DEFS_BY_TAB).forEach(cards=>{
+      cards.forEach(card=>{const t=card.tasks.find(x=>x.id===id);if(t){t.l=v;t.label=v;}});
+    });
+    saveState();
+  }
+  el.onblur=save;
+  el.onkeydown=e=>{
+    if(e.key==='Enter'){e.preventDefault();el.blur();}
+    if(e.key==='Escape'){el.textContent=orig;el.blur();}
+  };
 }
 
 function quickSetPriority(id, newPrio){
@@ -5744,7 +5890,11 @@ function saveDetailTitle(){
     saveDetailField('label',v);
     // Sync rich note
     const rn=document.getElementById('td-note-rich');
-    if(rn) saveDetailField('note',rn.innerText||'');
+    if(rn) saveDetailField('note',rn.innerHTML||'');
+    // Update label visually in task panel without full re-render
+    document.querySelectorAll(`.task-item[data-taskid="${currentDetailId}"] .task-item-label`).forEach(el=>{
+      el.textContent=v;
+    });
   },400);
 }
 
@@ -7765,9 +7915,12 @@ function initFloatingToolbar(editorEl){
     {label:'S', cmd:'strikeThrough', style:'text-decoration:line-through', title:'Riscado'},
     {label:'U', cmd:'underline', style:'text-decoration:underline', title:'Sublinhado'},
     {label:'M', cmd:'highlight', style:'background:#43b8cf4f;padding:0 2px;border-radius:3px;', title:'Destacar'},
-    {label:'A', cmd:'color', style:'color:#e57373;font-weight:700', title:'Cor'},
+    {label:'A', cmd:'color', style:'color:#e57373;font-weight:700', title:'Cor do texto'},
     {label:'T', cmd:'removeFormat', style:'font-size:13px', title:'Limpar formatação'},
   ];
+
+  // Color palette for text color picker
+  const TEXT_COLORS=['#e57373','#f06292','#ba68c8','#7986cb','#4dd0e1','#81c784','#ffb74d','#a1887f','#78909c','#1a1a1a'];
   
   btns.forEach(({label,cmd,style,title})=>{
     const btn=document.createElement('button');
@@ -7779,7 +7932,45 @@ function initFloatingToolbar(editorEl){
       if(cmd==='highlight'){
         ovHighlight();
       } else if(cmd==='color'){
-        document.execCommand('foreColor',false,'#e57373');
+        // Save selection BEFORE showing picker (mousedown on btn would lose it otherwise)
+        const savedSel=window.getSelection();
+        let savedRange=null;
+        if(savedSel&&savedSel.rangeCount>0) savedRange=savedSel.getRangeAt(0).cloneRange();
+        // Show color picker below button
+        const existing=document.getElementById('ft-color-picker');
+        if(existing){existing.remove();return;}
+        const picker=document.createElement('div');
+        picker.id='ft-color-picker';
+        const btnR=btn.getBoundingClientRect();
+        picker.style.cssText=`position:fixed;z-index:10000;background:white;border:1px solid var(--g150);border-radius:8px;padding:6px;box-shadow:0 4px 16px rgba(0,0,0,.15);display:flex;flex-wrap:wrap;gap:4px;width:136px;left:${Math.max(4,btnR.left-40)}px;top:${btnR.bottom+4}px;`;
+        TEXT_COLORS.forEach(c=>{
+          const sw=document.createElement('div');
+          sw.style.cssText=`width:20px;height:20px;border-radius:4px;background:${c};cursor:pointer;border:2px solid transparent;`;
+          sw.onmouseenter=()=>sw.style.border='2px solid #333';
+          sw.onmouseleave=()=>sw.style.border='2px solid transparent';
+          sw.onmousedown=ev=>{
+            ev.preventDefault();
+            // Restore saved selection then apply color
+            if(savedRange){
+              const sel=window.getSelection();
+              sel.removeAllRanges();
+              sel.addRange(savedRange);
+            }
+            document.execCommand('foreColor',false,c);
+            picker.remove();
+            btn.style.color=c;
+          };
+          picker.appendChild(sw);
+        });
+        // Clear color option
+        const clear=document.createElement('div');
+        clear.title='Remover cor';
+        clear.style.cssText='width:20px;height:20px;border-radius:4px;background:linear-gradient(to bottom right,white 45%,#e57373 45%,#e57373 55%,white 55%);cursor:pointer;border:1px solid var(--g200);';
+        clear.onmousedown=ev=>{ev.preventDefault();document.execCommand('removeFormat');picker.remove();};
+        picker.appendChild(clear);
+        document.body.appendChild(picker);
+        setTimeout(()=>document.addEventListener('mousedown',()=>picker.remove(),{once:true}),50);
+        return;
       } else {
         document.execCommand(cmd,false,null);
       }
@@ -7889,6 +8080,63 @@ function tdHighlight(){
     document.execCommand('insertHTML',false,'<mark style="background:#43b8cf4f;border-radius:3px;padding:0 2px;">'+range.toString()+'</mark>');
   }
 }
+const TD_TEXT_COLORS = [
+  {c:'#1c1c1c', label:'Preto'},
+  {c:'#7C6FCD', label:'Roxo'},
+  {c:'#2563eb', label:'Azul'},
+  {c:'#16a34a', label:'Verde'},
+  {c:'#dc2626', label:'Vermelho'},
+  {c:'#d97706', label:'Laranja'},
+  {c:'#db2777', label:'Rosa'},
+  {c:'#0891b2', label:'Ciano'},
+  {c:'#9333ea', label:'Violeta'},
+  {c:'#65a30d', label:'Lima'},
+  {c:'#a16207', label:'Amarelo escuro'},
+  {c:'#6b7280', label:'Cinza'},
+];
+let _tdLastColor = '#7C6FCD';
+
+function tdShowColorPicker(btn){
+  document.getElementById('td-color-pop')?.remove();
+  const pop = document.createElement('div');
+  pop.id = 'td-color-pop';
+  pop.style.cssText = 'position:fixed;z-index:9999;background:white;border:1px solid var(--g150);border-radius:10px;padding:8px;box-shadow:0 4px 20px rgba(0,0,0,.15);display:grid;grid-template-columns:repeat(6,1fr);gap:5px;width:170px;';
+  TD_TEXT_COLORS.forEach(({c, label}) => {
+    const sw = document.createElement('div');
+    sw.title = label;
+    sw.style.cssText = `width:22px;height:22px;border-radius:5px;background:${c};cursor:pointer;border:2px solid ${c===_tdLastColor?'#333':'transparent'};box-sizing:border-box;transition:transform .1s;`;
+    sw.onmouseenter = () => sw.style.transform = 'scale(1.15)';
+    sw.onmouseleave = () => sw.style.transform = '';
+    sw.onmousedown = e => {
+      e.preventDefault();
+      _tdLastColor = c;
+      document.execCommand('foreColor', false, c);
+      const swatch = document.getElementById('td-color-swatch');
+      if(swatch) swatch.style.color = c;
+      pop.remove();
+      (document.getElementById('td-note-rich')||document.getElementById('td-rich-editor'))?.focus();
+    };
+    pop.appendChild(sw);
+  });
+  // Add "remove color" option
+  const rem = document.createElement('div');
+  rem.title = 'Remover cor';
+  rem.style.cssText = 'width:22px;height:22px;border-radius:5px;background:#f5f5f5;cursor:pointer;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:11px;color:#999;box-sizing:border-box;';
+  rem.textContent = '✕';
+  rem.onmousedown = e => {
+    e.preventDefault();
+    document.execCommand('foreColor', false, '#1c1c1c');
+    pop.remove();
+    (document.getElementById('td-note-rich')||document.getElementById('td-rich-editor'))?.focus();
+  };
+  pop.appendChild(rem);
+  const rect = btn.getBoundingClientRect();
+  pop.style.left = Math.min(rect.left, window.innerWidth - 180) + 'px';
+  pop.style.top = (rect.bottom + 4) + 'px';
+  document.body.appendChild(pop);
+  setTimeout(() => document.addEventListener('mousedown', () => pop.remove(), {once:true}), 10);
+}
+
 function tdQuote(){
   const ed=document.getElementById('td-note-rich')||document.getElementById('td-rich-editor');
   if(!ed) return; ed.focus();
@@ -7988,7 +8236,7 @@ function ovHeader(){
     <button class="td-rich-btn" onmousedown="event.preventDefault();tdFmt('bold')"><b>B</b></button>
     <button class="td-rich-btn" onmousedown="event.preventDefault();tdFmt('italic')"><i>I</i></button>
     <button class="td-rich-btn" onmousedown="event.preventDefault();tdFmt('strikeThrough')" style="text-decoration:line-through;">S</button>
-    <button class="td-rich-btn" onmousedown="event.preventDefault();tdHighlight()" style="background:#43b8cf4f;border-radius:3px;">M</button>
+    <button class="td-rich-btn" onmousedown="event.preventDefault();tdHighlight()" title="Destacar texto" style="background:#43b8cf4f;border-radius:3px 0 0 3px;border-right:none;padding-right:4px;">M</button><button class="td-rich-btn" id="td-color-swatch" onmousedown="event.preventDefault();tdShowColorPicker(this)" title="Cor do texto" style="border-radius:0 3px 3px 0;border-left:1px solid var(--g150);padding:0 5px;font-size:11px;color:#7C6FCD">A▾</button>
     <div class="td-rich-sep"></div>
     <button class="td-rich-btn" onmousedown="event.preventDefault();tdQuote()" style="font-style:italic;font-size:14px;">"</button>
     <button class="td-rich-btn" onmousedown="event.preventDefault();tdInsertCheckbox()">☑</button>
