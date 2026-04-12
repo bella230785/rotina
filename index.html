@@ -4159,22 +4159,6 @@ function renderTaskPanelForKey(key, filterCatId=null){
     // Always delegate — CAT_TAB_MAP covers all known tabs
     filterTasksBy(key);
     return;
-    if(false&&CAT_TAB_MAP[key]){
-    title=map.label.toLowerCase();
-    addCatId=null;
-    const defs=CARD_DEFS_BY_TAB[map.tabId]||[];
-    defs.forEach(card=>{
-      card.tasks.forEach(t=>{
-        allTasks.push({
-          id:t.id, label:t.l, note:t.n||'',
-          catId:card.id, due:t.due||'', alarm:t.alarm||'', priority:t.priority||4,
-          time:t.time||'', duration:t.duration||'',
-          subtasks:t.subtasks,
-          _bg:card.iconBg, _color:card.color,
-        });
-      });
-    });
-    addCatId=defs[0]?.id;
   }
 
   // Filtro de categoria individual (clique em categoria)
