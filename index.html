@@ -275,7 +275,7 @@ body{
 .task-item:hover{background:var(--g50);}
 .task-item.dragging-task{opacity:.3;}
 .task-item.done-task .task-item-label{text-decoration:line-through;color:var(--g300);}
-.task-item.scheduled .task-item-label{color:var(--g400);}
+.task-item.scheduled .task-item-label{color:inherit;}
 
 /* Checkbox redondo estilo TickTick */
 .task-cb{
@@ -290,7 +290,7 @@ body{
 
 .task-item-body{flex:1;min-width:0;}
 .task-item-label{line-height:1.45;word-break:break-word;font-size:12px;}
-.task-item-meta{display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap;}
+.task-item-meta{display:none;}
 .task-due{font-size:11px;color:var(--g400);display:flex;align-items:center;gap:3px;}
 .task-due.overdue{color:#dc2626;}
 .task-due.today{color:#cf6d9e;}
@@ -303,8 +303,9 @@ body{
 .task-item[data-cat-color]{border-left:2px solid transparent;}
 
 /* Ações ao hover — aparecem à direita */
-.task-item-actions{display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);gap:2px;background:var(--g50);border-radius:6px;padding:2px;}
+.task-item-actions{display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);gap:2px;background:var(--g50);border-radius:6px;padding:2px;align-items:center;}
 .task-item:hover .task-item-actions{display:flex;}
+@media(hover:none){.task-item-actions{display:none!important;}}
 .task-action-btn{font-size:11px;background:none;border:none;border-radius:4px;padding:3px 5px;cursor:pointer;color:var(--g400);font-family:inherit;line-height:1;}
 .task-action-btn:hover{background:var(--g100);color:var(--g800);}
 .task-action-btn.del:hover{color:#dc2626;}
@@ -320,7 +321,7 @@ body{
   padding:10px 16px 5px;
 }
 .tp-cat-group-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.tp-cat-group-name{font-size:12px;font-weight:600;color:var(--g700);flex:1;}
+.tp-cat-group-name{font-size:14px;font-weight:600;color:var(--g700);flex:1;}
 .tp-cat-group-count{display:none;}
 .tp-sort-btn{font-size:10px;color:var(--g400);background:none;border:1px solid var(--g150);border-radius:20px;padding:2px 8px;cursor:pointer;font-family:inherit;transition:all .12s;}
 .tp-sort-btn:hover{color:var(--g700);border-color:var(--g300);}
@@ -553,8 +554,8 @@ body{
 .cal-hdr{display:grid;grid-template-columns:52px repeat(7,1fr);border-bottom:1px solid var(--g100);background:white;flex-shrink:0;position:sticky;top:0;z-index:10;}
 .cal-hcell{padding:8px 4px;text-align:center;border-left:1px solid var(--g100);}
 .cal-hcell:first-child{border-left:none;}
-.day-name{font-size:10px;font-weight:600;color:var(--g300);letter-spacing:.07em;text-transform:uppercase;}
-.day-num{font-size:22px;font-weight:300;color:var(--g500);line-height:1.2;margin-top:1px;}
+.day-name{font-size:12px;font-weight:600;color:var(--g300);letter-spacing:.07em;text-transform:uppercase;}
+.day-num{font-size:26px;font-weight:300;color:var(--g500);line-height:1.2;margin-top:1px;}
 .day-num.today{color:#cf6d9e;font-weight:700;}
 .cal-body{display:grid;grid-template-columns:52px repeat(7,1fr);flex:1;}
 .time-col{display:flex;flex-direction:column;}
@@ -1345,7 +1346,7 @@ button, input, select, textarea { font-size: var(--fs) !important; }
 
   <!-- BRAND -->
   <div class="sb-logo-wrap">
-    <div class="sb-logo-icon">r</div>
+    <div class="sb-logo-icon"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2z"/><path d="M10 6v4l3 2"/></svg></div>
     <input class="sb-logo-txt" id="sb-logo-txt" value="rotina"
       onfocus="this.select()" onblur="saveSbLogo(this.value)"
       onkeydown="if(event.key==='Enter')this.blur()">
@@ -1631,15 +1632,15 @@ button, input, select, textarea { font-size: var(--fs) !important; }
 
             <div class="nut-card nut-vcard" id="nvc-nexus" draggable="true" data-nvc="nexus" style="background:var(--white);border:1px solid var(--g100);">
               <div class="nvc-handle">⠿</div>
-              <div class="nut-vcard-label" data-key="nexus" contenteditable="true" spellcheck="false" style="color:var(--g600,#6B6760);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem;display:block;">do this. or stay the same.</div>
-              <div id="nut-nexus-quote" style="font-size:13px;color:var(--g700,#3D3A35);font-style:italic;margin-bottom:.625rem;line-height:1.6;"></div>
-              <div id="nut-nexus-next" style="font-size:13px;font-weight:500;color:#5A50B8;line-height:1.5;"></div>
+              <div class="nut-vcard-label" data-key="nexus" contenteditable="true" spellcheck="false" style="color:var(--g700);font-size:15px;font-weight:600;letter-spacing:.01em;margin-bottom:.5rem;display:block;">nexus</div>
+              <div id="nut-nexus-quote" style="font-size:15px;color:var(--g700,#3D3A35);font-style:italic;margin-bottom:.625rem;line-height:1.6;"></div>
+              <div id="nut-nexus-next" style="font-size:15px;font-weight:500;color:#5A50B8;line-height:1.5;"></div>
             </div>
 
             <div class="nut-card nut-vcard" id="nvc-hoje" draggable="true" data-nvc="hoje">
               <div class="nvc-handle">⠿</div>
-              <div class="nut-vcard-label" data-key="hoje" contenteditable="true" spellcheck="false" style="font-size:10px;font-weight:700;color:var(--g400);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem;display:block;">o que tem hoje:</div>
-              <div id="nut-today-tasks" style="display:flex;flex-direction:column;gap:4px;"></div>
+              <div class="nut-vcard-label" data-key="hoje" contenteditable="true" spellcheck="false" style="font-size:15px;font-weight:600;color:var(--g700);letter-spacing:.01em;margin-bottom:.5rem;display:block;">hoje</div>
+              <div id="nut-today-tasks" style="display:flex;flex-direction:column;gap:4px;font-size:14px;"></div>
             </div>
 
           </div>
@@ -1649,13 +1650,13 @@ button, input, select, textarea { font-size: var(--fs) !important; }
 
             <!-- Treino card — TOP, coloured background -->
             <div class="nut-vcard" id="nvc-treino" draggable="true" data-nvc="treino"
-              style="background:var(--accent-l,#EAE6F8);border:1px solid var(--g100);border-radius:13px;padding:.7rem .85rem;cursor:grab;">
+              style="background:#f2f2f2;border:1px solid var(--g100);border-radius:13px;padding:.7rem .85rem;cursor:grab;">
               <div class="nvc-handle">⠿</div>
-              <div class="nut-vcard-label" data-key="treino" style="color:var(--g700);">
+              <div class="nut-vcard-label" data-key="treino" style="color:var(--g700);font-size:15px;font-weight:600;margin-bottom:.35rem;display:block;">
                 <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="var(--g700)" stroke-width="2" stroke-linecap="round" style="margin-right:4px;vertical-align:middle;"><path d="M4 10h2l2-6 4 12 2-6h2"/></svg>treino hoje
               </div>
-              <div id="nut-treino-hoje" style="font-size:12px;color:#5A50B8;margin-bottom:6px;margin-top:5px;">—</div>
-              <div id="nut-treino-count" style="font-size:10px;color:#9B8FCC;margin-bottom:6px;"></div>
+              <div id="nut-treino-hoje" style="font-size:15px;font-weight:500;color:#5A50B8;margin-bottom:6px;margin-top:5px;">—</div>
+              <div id="nut-treino-count" style="font-size:12px;color:#9B8FCC;margin-bottom:6px;"></div>
               <div id="nut-treino-cal"></div>
             </div>
 
@@ -1666,7 +1667,7 @@ button, input, select, textarea { font-size: var(--fs) !important; }
                 <div class="nvc-handle">⠿</div>
                 <div class="nut-vcard-label" data-key="sleep">🌙 sono</div>
                 <input id="nut-card-sleep" type="number" step="0.5" placeholder=""
-                  style="font-size:18px;font-weight:700;color:var(--g800);background:none;border:none;outline:none;width:100%;padding:0;font-family:inherit;letter-spacing:-.03em;"
+                  style="font-size:22px;font-weight:700;color:var(--g800);background:none;border:none;outline:none;width:100%;padding:0;font-family:inherit;letter-spacing:-.03em;"
                   oninput="const _d=nutGetActiveDay();_d.sleep=parseFloat(this.value)||0;if(getActiveDate()===nutTodayKey()){nutState.sleep=this.value;}nutPersist();const h=document.getElementById('nut-e-sleep');if(h)h.value=this.value;"/>
                 <div style="font-size:9px;color:var(--g400);margin-top:2px;">h</div>
               </div>
@@ -1675,7 +1676,7 @@ button, input, select, textarea { font-size: var(--fs) !important; }
                 <div class="nvc-handle">⠿</div>
                 <div class="nut-vcard-label" data-key="kg">⚖️ peso</div>
                 <input id="nut-card-kg" type="number" step="0.1" placeholder=""
-                  style="font-size:18px;font-weight:700;color:var(--g800);background:none;border:none;outline:none;width:100%;padding:0;font-family:inherit;letter-spacing:-.03em;"
+                  style="font-size:22px;font-weight:700;color:var(--g800);background:none;border:none;outline:none;width:100%;padding:0;font-family:inherit;letter-spacing:-.03em;"
                   oninput="const _d=nutGetActiveDay();_d.kg=parseFloat(this.value)||0;if(getActiveDate()===nutTodayKey()){nutState.kgToday=this.value;}nutPersist();const h=document.getElementById('nut-e-kg');if(h)h.value=this.value;"/>
                 <div style="font-size:9px;color:var(--g400);margin-top:2px;">kg</div>
               </div>
@@ -2310,19 +2311,16 @@ function makeKanbanCardHTML(card, t, tabId, dayMode=false){
   const subs=t.subtasks||[];
   const subDone=subs.filter(s=>s.done).length;
 
-  return`<div class="kanban-card${isExp?' expanded':''}" data-eid="${eid}" data-cid="${cid}" data-tid="${t.id}" data-tabid="${tabId}">
+  return`<div class="kanban-card${isExp?' expanded':''}" data-eid="${eid}" data-cid="${cid}" data-tid="${t.id}" data-tabid="${tabId}" ondblclick="event.stopPropagation();openTaskDetailExpanded('${t.id}')">
     <div class="kanban-card-top" style="display:flex;align-items:center;gap:8px;padding:4px 6px;">
-      <div class="kanban-card-cb${done?' done':''}" onclick="kanbanToggle('${cid}','${t.id}','${tabId}',event)"></div>
-      <div class="kanban-card-body" ondblclick="kanbanOpenDetail('${cid}','${t.id}',event)" style="cursor:default">
+      <div class="kanban-card-cb${done?' done':''}" onclick="event.stopPropagation();kanbanToggle('${cid}','${t.id}','${tabId}',event)"></div>
+      <div class="kanban-card-body" style="flex:1;min-width:0;">
         <textarea class="kanban-card-title${done?' done-txt':''}" rows="1"
           readonly
           oninput="autoResizeTextarea(this);kanbanSaveTitle('${cid}','${t.id}',this.value)"
           >${(t.l||'').replace(/</g,'&lt;')}</textarea>
-        <div class="kanban-card-meta" style="display:none;">
-
-          ${dayMode&&t._cardTitle?`<span style="font-size:10px;background:${t._cardBg||'#eee'};color:${t._cardColor||'#666'};padding:1px 6px;border-radius:20px">${t._cardTitle}</span>`:''}
-        </div>
       </div>
+      ${(t.priority||4)===1?`<span style="font-size:11px;flex-shrink:0;line-height:1;">⭐</span>`:''}
     </div>
     ${isExp?`
     <textarea class="kanban-card-note" placeholder="Notas, links, contexto…" rows="2"
@@ -2338,14 +2336,6 @@ function makeKanbanCardHTML(card, t, tabId, dayMode=false){
       <button style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--g400);font-family:inherit;padding:3px 0;text-align:left"
         onclick="kanbanAddSub('${cid}','${t.id}','${tabId}')">＋ subtarefa</button>
     </div>`:''}
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <button class="kanban-card-expand-btn" onclick="kanbanToggleExpand('${eid}','${tabId}',event)">
-        ${isExp?'▲ recolher':'▼ expandir'}
-      </button>
-      <button onclick="event.stopPropagation();kanbanQuickPrio('${cid}','${t.id}','${tabId}')"
-        style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 6px;opacity:${(t.priority||4)===1?'1':'.3'};transition:all .15s;"
-        onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='${(t.priority||4)===1?"1":"0.3"}'">⭐</button>
-    </div>
   </div>`;
 }
 
@@ -4743,12 +4733,13 @@ function taskItemHTML(t,isDone=false,isScheduled=false){
     <div class="task-cb${d?' checked':''}" style="${p===1?'border-color:#f87171':p===2?'border-color:#fbbf24':''}"
       onclick="event.stopPropagation();toggleTaskDone('${t.id}')"></div>
     <div class="task-item-body" onclick="if(_tp.wasDrag)return;event.stopPropagation();openTaskDetail('${t.id}')" style="cursor:pointer">
-      <div class="task-item-label" ondblclick="event.stopPropagation();tpInlineEditLabel('${t.id}',this)">${t.label||''}</div>
-      ${metaParts.length?`<div class="task-item-meta">${metaParts.join('')}</div>`:''}
+      <div style="display:flex;align-items:center;gap:5px;">
+        ${p===1?`<span style="font-size:11px;line-height:1;flex-shrink:0;">⭐</span>`:''}
+        <div class="task-item-label" ondblclick="event.stopPropagation();tpInlineEditLabel('${t.id}',this)">${t.label||''}</div>
+      </div>
     </div>
     <div class="task-item-actions">
-      <button class="task-action-btn task-star-btn${p===1?' task-star-lit':''}" onclick="event.stopPropagation();quickSetPriority('${t.id}',${p===1?3:1})" title="${p===1?'Remover prioridade':'Marcar como prioritária'}" style="opacity:${p===1?'1':'.35'};font-size:13px;"${p===1?' style="opacity:1;font-size:13px;"':''}>⭐</button>
-      <button class="task-action-btn" onclick="event.stopPropagation();openTaskDetailExpanded('${t.id}')" title="Abrir expandido">↗</button>
+      <button class="task-action-btn task-star-btn${p===1?' task-star-lit':''}" onclick="event.stopPropagation();quickSetPriority('${t.id}',${p===1?3:1})" title="${p===1?'Remover prioridade':'Marcar como prioritária'}" style="opacity:${p===1?'1':'.35'};font-size:13px;">☆</button>
       <button class="task-action-btn del" onclick="event.stopPropagation();deleteTask('${t.id}',event)" title="Apagar">✕</button>
     </div>
   </div>`;
@@ -7508,6 +7499,29 @@ function sbHeaders(){
 }
 
 function buildSnapshot(){
+  // Flush live vit/water/foods into today's day record before snapshotting
+  // so these are never lost when switching browsers
+  try {
+    const _today=nutTodayKey();
+    let _day=nutState.days.find(d=>d.date===_today);
+    if(!_day){
+      _day={date:_today,prot:0,carbs:0,fat:0,fib:0,cal:0,deficit:0,water:0,sleep:0,ker:0,
+        ex:'',kg:0,poly:0,nourkrin:0,vitaD:0,vitC:0,ferro:0,creatina:0,minoxidil:0,magnesio:0,foods:'',notes:''};
+      nutState.days.push(_day);
+      nutState.days.sort((a,b)=>a.date.localeCompare(b.date));
+    }
+    _day.poly=nutState.vit['0-0']?1:0;
+    _day.nourkrin=nutState.vit['0-1']?1:0;
+    _day.vitaD=nutState.vit['0-2']?1:0;
+    _day.vitC=nutState.vit['1-0']?1:0;
+    _day.ferro=nutState.vit['1-1']?1:0;
+    _day.creatina=nutState.vit['2-0']?1:0;
+    _day.minoxidil=nutState.vit['2-1']?1:0;
+    _day.magnesio=nutState.vit['2-2']?1:0;
+    _day.water=nutState.waterChecks*500;
+    _day._foods=JSON.parse(JSON.stringify(nutState.foods||[]));
+  } catch(e){}
+
   // Gather nut UI state from localStorage (transient UI prefs)
   const nutUI = {
     layout:      safeLS('nutLayout'),
@@ -7581,6 +7595,31 @@ function applySnapshot(snap){
     (sn.days||[]).forEach(d=>merged[d.date]=d);
     Object.assign(nutState, sn);
     nutState.days=Object.values(merged).sort((a,b)=>a.date.localeCompare(b.date));
+
+    // Always re-derive live state (foods/vit/water) from today's day record
+    // to avoid stale data from a previous session bleeding into today
+    const _today=nutTodayKey();
+    const _todayRec=nutState.days.find(d=>d.date===_today);
+    if(_todayRec){
+      nutState.foods=_todayRec._foods||[];
+      nutState.vit={};
+      if(_todayRec.poly)      nutState.vit['0-0']=true;
+      if(_todayRec.nourkrin)  nutState.vit['0-1']=true;
+      if(_todayRec.vitaD)     nutState.vit['0-2']=true;
+      if(_todayRec.vitC)      nutState.vit['1-0']=true;
+      if(_todayRec.ferro)     nutState.vit['1-1']=true;
+      if(_todayRec.colageno||_todayRec.creatina) nutState.vit['2-0']=true;
+      if(_todayRec.minoxidil) nutState.vit['2-1']=true;
+      if(_todayRec.magnesio)  nutState.vit['2-2']=true;
+      nutState.waterChecks=_todayRec.water?Math.min(4,Math.round(_todayRec.water/500)):0;
+    } else {
+      // No record for today — start fresh
+      nutState.foods=[];
+      nutState.vit={};
+      nutState.waterChecks=0;
+    }
+    nutState.lastDate=_today;
+
     nutPersist();
     // Re-inject custom foods into FOODS array
     if(typeof loadCustomFoods==='function') loadCustomFoods();
@@ -9382,15 +9421,10 @@ function load(){
   }
 }
 function nutPersist(){
-  // 1. Salvar no localStorage imediatamente (rápido, sem rede)
   try{ localStorage.setItem('nutr3',JSON.stringify(nutState)); }catch(e){}
-  // 2. Atualizar cache geral imediatamente (inclui nutState no snapshot)
-  if(typeof saveState==='function') saveState();
-  // 3. Sync pro Supabase com debounce curto
+  // Debounce sync to Supabase (saveState already handles timestamp)
   clearTimeout(nutPersist._t);
-  nutPersist._t=setTimeout(()=>{
-    if(typeof syncToAppsScript==='function') syncToAppsScript();
-  }, 800);
+  nutPersist._t=setTimeout(()=>{ if(typeof saveState==='function') saveState(); }, 1500);
 }
 function nutTodayKey(){
   const d=new Date();
@@ -9414,83 +9448,11 @@ function nutGetActiveDay(){
   return day;
 }
 
-// Captura o estado atual da UI e persiste no registro do dia
-function nutSaveDaySnapshot(date){
-  if(!date) date = getActiveDate();
-  let day = nutState.days.find(d => d.date === date);
-  if(!day){
-    day = {date,prot:0,carbs:0,fat:0,fib:0,cal:0,deficit:0,water:0,
-           sleep:0,ker:0,ex:'',kg:0,poly:0,nourkrin:0,vitaD:0,vitC:0,
-           ferro:0,creatina:0,minoxidil:0,magnesio:0,foods:'',notes:''};
-    nutState.days.push(day);
-    nutState.days.sort((a,b)=>a.date.localeCompare(b.date));
-  }
-  const isToday = date === nutTodayKey();
-
-  // Sono
-  const sleepEl = document.getElementById('nut-card-sleep') || document.getElementById('nut-e-sleep');
-  if(sleepEl && sleepEl.value) day.sleep = parseFloat(sleepEl.value)||0;
-  else if(isToday && nutState.sleep) day.sleep = parseFloat(nutState.sleep)||0;
-
-  // Peso
-  const kgEl = document.getElementById('nut-card-kg') || document.getElementById('nut-e-kg');
-  if(kgEl && kgEl.value) day.kg = parseFloat(kgEl.value)||0;
-  else if(isToday && nutState.kgToday) day.kg = parseFloat(nutState.kgToday)||0;
-
-  // Exercício
-  const exEl = document.getElementById('nut-e-ex');
-  if(exEl) day.ex = exEl.value||'';
-  else if(isToday) day.ex = nutState.exToday||'';
-
-  // Queratina
-  const kerEl = document.getElementById('nut-e-ker');
-  if(kerEl && kerEl.value) day.ker = parseInt(kerEl.value)||0;
-  else if(isToday && nutState.kerToday) day.ker = parseInt(nutState.kerToday)||0;
-
-  // Notas
-  const notesEl = document.getElementById('nut-e-notes');
-  if(notesEl) day.notes = notesEl.value||'';
-
-  // Água (de nutState.waterChecks)
-  day.water = (isToday ? nutState.waterChecks : (day.water/500||0)) * 500;
-  if(isToday) day.water = nutState.waterChecks * 500;
-
-  // Vitaminas
-  const vit = isToday ? nutState.vit : day._vit||{};
-  const VF = {'0-0':'poly','0-1':'nourkrin','0-2':'vitaD','1-0':'vitC',
-               '1-1':'ferro','2-0':'creatina','2-1':'minoxidil','2-2':'magnesio'};
-  Object.entries(VF).forEach(([k,f])=>{ day[f] = (nutState.vit[k]||0)?1:0; });
-
-  // Foods
-  if(isToday) day._foods = [...nutState.foods];
-  const totals = getTotals();
-  if(isToday){
-    day.prot = Math.round(totals.prot*10)/10;
-    day.carbs = Math.round(totals.carb*10)/10;
-    day.fat  = Math.round(totals.fat*10)/10;
-    day.fib  = Math.round(totals.fib*10)/10;
-    day.cal  = Math.round(totals.cal);
-    day.deficit = (nutState.goals?.cal||1600) - day.cal;
-  }
-
-  // Atualiza nutState transientes se for hoje
-  if(isToday){
-    if(sleepEl?.value) nutState.sleep = sleepEl.value;
-    if(kgEl?.value) nutState.kgToday = kgEl.value;
-    if(exEl) nutState.exToday = exEl.value||'';
-    nutState.lastDate = date;
-  }
-
-  nutPersist();
-}
-
 function nutNavDay(dir){
   const el=document.getElementById('nut-active-date');
   if(!el) return;
   const current=el.value||nutTodayKey();
   if(dir>0 && current>=nutTodayKey()) return; // no future
-  // Salvar o dia atual antes de navegar
-  nutSaveDaySnapshot(current);
   const parts=current.split('-').map(Number);
   const cur=new Date(parts[0],parts[1]-1,parts[2]);
   cur.setDate(cur.getDate()+dir);
@@ -9593,7 +9555,7 @@ function getTotals(){
 
 function nutRenderMetrics(){
   const t=getTotals(), g=nutState.goals, def=g.cal-t.cal;
-  const today=getActiveDate(); // usa o dia ativo, não necessariamente hoje
+  const today=nutTodayKey();
   const day=nutState.days.find(d=>d.date===today)||{};
 
   // Macros only — read-only, computed from food log
@@ -10457,8 +10419,8 @@ function nutRenderDailyProgress(){
         '<span style="font-size:'+(it.isBool?'12px':'9px')+';font-weight:600;color:'+(done?'var(--g700)':'var(--g400)')+';">'+
           (it.isBool?(done?'✓':'·'):(pct+'%'))+'</span></div>'+
       '<div style="flex:1;min-width:0;">'+
-        '<div style="font-size:10px;font-weight:500;color:var(--g500);">'+it.label+'</div>'+
-        '<div style="font-size:10px;color:'+(done?'var(--g700)':'var(--g400)')+';">'+valLabel+'</div>'+
+        '<div style="font-size:13px;font-weight:500;color:var(--g500);">'+it.label+'</div>'+
+        '<div style="font-size:13px;color:'+(done?'var(--g700)':'var(--g400)')+';">'+valLabel+'</div>'+
       '</div></div>';
   });
   el.innerHTML='<div class="nut-card" style="display:flex;flex-direction:column;gap:10px;">'+
