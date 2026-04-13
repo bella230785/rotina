@@ -1226,7 +1226,30 @@ button, input, select, textarea { font-size: var(--fs) !important; }
 
 
 /* Vitals card drag reorder */
-.nut-vcard { transition:box-shadow .15s, opacity .15s, transform .15s; user-select:none; position:relative; }
+.nut-widget { position:relative; }
+.nvc-widget-bar {
+  display:flex;align-items:center;gap:6px;
+  background:var(--g50);margin:-.75rem -.85rem .6rem;
+  padding:.4rem .6rem .4rem .5rem;border-radius:12px 12px 0 0;
+  border-bottom:1px solid var(--g100);
+}
+.nvc-widget-bar .nvc-handle { color:var(--g300);cursor:grab;font-size:13px;flex-shrink:0; }
+.nvc-widget-bar .nut-vcard-label, .nvc-widget-bar > * { flex:1;min-width:0; }
+.nvc-widget-actions { display:none;align-items:center;gap:2px;flex-shrink:0; }
+.nut-widget:hover .nvc-widget-actions { display:flex; }
+.nvc-span-btn, .nvc-collapse-btn {
+  font-size:11px;background:none;border:none;cursor:pointer;
+  color:var(--g400);padding:2px 5px;border-radius:4px;font-family:inherit;line-height:1;
+  transition:background .1s,color .1s;
+}
+.nvc-span-btn:hover, .nvc-collapse-btn:hover { background:var(--g100);color:var(--g700); }
+.nut-widget[data-span="2"] { grid-column:span 2; }
+.nut-widget.nvc-collapsed .nvc-widget-body { display:none; }
+.nut-widget.nvc-collapsed { margin-bottom:0; }
+.nvc-collapsed .nvc-widget-bar { border-radius:12px;border-bottom:none;margin-bottom:0; }
+.nut-widget.nvc-dragging { opacity:.35; }
+.nut-widget.nvc-drop-before { box-shadow:-3px 0 0 var(--accent); }
+.nut-widget.nvc-drop-after { box-shadow:3px 0 0 var(--accent); }
 /* Card color picker */
 #nut-card-color-picker{position:fixed;z-index:500;background:var(--white);border:1px solid var(--g150);border-radius:14px;padding:10px;box-shadow:0 8px 28px rgba(0,0,0,.14);display:flex;flex-direction:column;gap:8px;min-width:160px;}
 .ncc-row{display:flex;gap:5px;flex-wrap:wrap;}
@@ -1609,116 +1632,145 @@ button, input, select, textarea { font-size: var(--fs) !important; }
           </div>
         </div>
 
-        <!-- Three columns: left | middle | right sidebar -->
-        <div style="display:grid;grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr) minmax(0,.85fr);gap:1rem;align-items:start;margin-bottom:1.25rem;">
+        <!-- Widget grid — 2 colunas, cards draggáveis -->
+        <div id="nut-widget-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;align-items:start;margin-bottom:1.25rem;">
 
-          <!-- LEFT COLUMN: water + vitamins -->
-          <div id="nut-left-col" style="display:flex;flex-direction:column;gap:.625rem;">
-
-            <div class="nut-card nut-vcard" id="nvc-water" draggable="true" data-nvc="water">
+          <div class="nut-card nut-vcard nut-widget" id="nvc-water" draggable="true" data-nvc="water" data-span="1">
+            <div class="nvc-widget-bar">
               <div class="nvc-handle">⠿</div>
               <div class="nut-vcard-label nut-card-title" data-key="water" contenteditable="true" spellcheck="false">did you drink water yet? 💧</div>
+              <div class="nvc-widget-actions">
+                <button class="nvc-span-btn" onclick="nutToggleSpan(this)" title="largura">⇔</button>
+                <button class="nvc-collapse-btn" onclick="nutToggleCollapse(this)" title="colapsar">−</button>
+              </div>
+            </div>
+            <div class="nvc-widget-body">
               <div id="nut-water-checks" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
               <div style="font-size:10px;color:var(--g400);margin-top:5px;" id="nut-water-ml"></div>
               <div contenteditable="true" spellcheck="false" data-key="water-note"
                 style="font-size:11px;color:var(--g500);margin-top:7px;padding:5px 0;border-top:1px solid var(--g50);outline:none;min-height:18px;line-height:1.5;cursor:text;"
-                placeholder="nota..."
-                onblur="nutSaveCardNote('water-note',this.textContent.trim())"
-                onfocus="if(!this.textContent.trim())this.textContent=''"
-              ></div>
+                onblur="nutSaveCardNote('water-note',this.textContent.trim())"></div>
             </div>
+          </div>
 
-            <div class="nut-card nut-vcard" id="nvc-vit" draggable="true" data-nvc="vit">
+          <div class="nut-card nut-vcard nut-widget" id="nvc-vit" draggable="true" data-nvc="vit" data-span="1">
+            <div class="nvc-widget-bar">
               <div class="nvc-handle">⠿</div>
               <div class="nut-vcard-label nut-card-title" data-key="vit" contenteditable="true" spellcheck="false">earn your glow ✨</div>
+              <div class="nvc-widget-actions">
+                <button class="nvc-span-btn" onclick="nutToggleSpan(this)" title="largura">⇔</button>
+                <button class="nvc-collapse-btn" onclick="nutToggleCollapse(this)" title="colapsar">−</button>
+              </div>
+            </div>
+            <div class="nvc-widget-body">
               <div id="nut-vit-grid"></div>
               <div contenteditable="true" spellcheck="false" data-key="vit-note"
                 style="font-size:11px;color:var(--g500);margin-top:7px;padding:5px 0;border-top:1px solid var(--g50);outline:none;min-height:18px;line-height:1.5;cursor:text;"
-                placeholder="nota..."
-                onblur="nutSaveCardNote('vit-note',this.textContent.trim())"
-              ></div>
+                onblur="nutSaveCardNote('vit-note',this.textContent.trim())"></div>
             </div>
-
           </div>
 
-          <!-- MIDDLE COLUMN: nexus top, tasks below -->
-          <div id="nut-mid-col" style="display:flex;flex-direction:column;gap:.625rem;">
-
-            <div class="nut-card nut-vcard" id="nvc-nexus" draggable="true" data-nvc="nexus" style="background:var(--white);border:1px solid var(--g100);">
+          <div class="nut-card nut-vcard nut-widget" id="nvc-nexus" draggable="true" data-nvc="nexus" data-span="1" style="background:var(--white);border:1px solid var(--g100);">
+            <div class="nvc-widget-bar">
               <div class="nvc-handle">⠿</div>
-              <div class="nut-vcard-label" data-key="nexus" contenteditable="true" spellcheck="false" style="color:var(--g700);font-size:15px;font-weight:600;letter-spacing:.01em;margin-bottom:.5rem;display:block;">nexus</div>
+              <div class="nut-vcard-label" data-key="nexus" contenteditable="true" spellcheck="false" style="color:var(--g700);font-size:15px;font-weight:600;letter-spacing:.01em;">nexus</div>
+              <div class="nvc-widget-actions">
+                <button class="nvc-span-btn" onclick="nutToggleSpan(this)" title="largura">⇔</button>
+                <button class="nvc-collapse-btn" onclick="nutToggleCollapse(this)" title="colapsar">−</button>
+              </div>
+            </div>
+            <div class="nvc-widget-body" style="margin-top:.5rem;">
               <div id="nut-nexus-quote" style="font-size:15px;color:var(--g700,#3D3A35);font-style:italic;margin-bottom:.625rem;line-height:1.6;"></div>
               <div id="nut-nexus-next" style="font-size:15px;font-weight:500;color:#5A50B8;line-height:1.5;"></div>
             </div>
-
-            <div class="nut-card nut-vcard" id="nvc-hoje" draggable="true" data-nvc="hoje">
-              <div class="nvc-handle">⠿</div>
-              <div class="nut-vcard-label" data-key="hoje" contenteditable="true" spellcheck="false" style="font-size:15px;font-weight:600;color:var(--g700);letter-spacing:.01em;margin-bottom:.5rem;display:block;">hoje</div>
-              <div id="nut-today-tasks" style="display:flex;flex-direction:column;gap:4px;font-size:14px;"></div>
-            </div>
-
           </div>
 
-          <!-- RIGHT COLUMN: draggable vitals + treino -->
-          <div id="nut-right-col" style="display:flex;flex-direction:column;gap:.625rem;">
-
-            <!-- Treino card — TOP, coloured background -->
-            <div class="nut-vcard" id="nvc-treino" draggable="true" data-nvc="treino"
-              style="background:#f2f2f2;border:1px solid var(--g100);border-radius:13px;padding:.7rem .85rem;cursor:grab;">
+          <div class="nut-card nut-vcard nut-widget" id="nvc-hoje" draggable="true" data-nvc="hoje" data-span="1">
+            <div class="nvc-widget-bar">
               <div class="nvc-handle">⠿</div>
-              <div class="nut-vcard-label" data-key="treino" style="color:var(--g700);font-size:15px;font-weight:600;margin-bottom:.35rem;display:block;">
-                <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="var(--g700)" stroke-width="2" stroke-linecap="round" style="margin-right:4px;vertical-align:middle;"><path d="M4 10h2l2-6 4 12 2-6h2"/></svg>treino hoje
+              <div class="nut-vcard-label" data-key="hoje" contenteditable="true" spellcheck="false" style="font-size:15px;font-weight:600;color:var(--g700);letter-spacing:.01em;">hoje</div>
+              <div class="nvc-widget-actions">
+                <button class="nvc-span-btn" onclick="nutToggleSpan(this)" title="largura">⇔</button>
+                <button class="nvc-collapse-btn" onclick="nutToggleCollapse(this)" title="colapsar">−</button>
               </div>
-              <div id="nut-treino-hoje" style="font-size:15px;font-weight:500;color:#5A50B8;margin-bottom:6px;margin-top:5px;">—</div>
+            </div>
+            <div class="nvc-widget-body" style="margin-top:.5rem;">
+              <div id="nut-today-tasks" style="display:flex;flex-direction:column;gap:4px;font-size:14px;"></div>
+            </div>
+          </div>
+
+          <div class="nut-vcard nut-widget" id="nvc-treino" draggable="true" data-nvc="treino" data-span="1"
+            style="background:#f2f2f2;border:1px solid var(--g100);border-radius:13px;padding:.7rem .85rem;">
+            <div class="nvc-widget-bar" style="background:transparent;margin:-.7rem -.85rem .4rem;padding:.5rem .85rem;">
+              <div class="nvc-handle">⠿</div>
+              <div class="nut-vcard-label" data-key="treino" style="display:flex;align-items:center;gap:4px;color:var(--g700);font-size:15px;font-weight:600;">
+                <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="var(--g700)" stroke-width="2" stroke-linecap="round"><path d="M4 10h2l2-6 4 12 2-6h2"/></svg>treino hoje
+              </div>
+              <div class="nvc-widget-actions">
+                <button class="nvc-span-btn" onclick="nutToggleSpan(this)" title="largura">⇔</button>
+                <button class="nvc-collapse-btn" onclick="nutToggleCollapse(this)" title="colapsar">−</button>
+              </div>
+            </div>
+            <div class="nvc-widget-body">
+              <div id="nut-treino-hoje" style="font-size:15px;font-weight:500;color:#5A50B8;margin-bottom:6px;">—</div>
               <div id="nut-treino-count" style="font-size:12px;color:#9B8FCC;margin-bottom:6px;"></div>
               <div id="nut-treino-cal"></div>
             </div>
+          </div>
 
-            <!-- sono + peso side by side -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;" id="nvc-pair-sp">
-              <div class="nut-vcard" id="nvc-sleep" draggable="true" data-nvc="sleep"
-                style="background:var(--white);border:1px solid var(--g100);border-radius:13px;padding:.6rem .75rem;cursor:grab;">
-                <div class="nvc-handle">⠿</div>
-                <div class="nut-vcard-label" data-key="sleep">🌙 sono</div>
-                <input id="nut-card-sleep" type="number" step="0.5" placeholder=""
-                  style="font-size:22px;font-weight:700;color:var(--g800);background:none;border:none;outline:none;width:100%;padding:0;font-family:inherit;letter-spacing:-.03em;"
-                  oninput="const _d=nutGetActiveDay();_d.sleep=parseFloat(this.value)||0;if(getActiveDate()===nutTodayKey()){nutState.sleep=this.value;}nutPersist();const h=document.getElementById('nut-e-sleep');if(h)h.value=this.value;"/>
-                <div style="font-size:9px;color:var(--g400);margin-top:2px;">h</div>
-              </div>
-              <div class="nut-vcard" id="nvc-kg" draggable="true" data-nvc="kg"
-                style="background:var(--white);border:1px solid var(--g100);border-radius:13px;padding:.6rem .75rem;cursor:grab;">
-                <div class="nvc-handle">⠿</div>
-                <div class="nut-vcard-label" data-key="kg">⚖️ peso</div>
-                <input id="nut-card-kg" type="number" step="0.1" placeholder=""
-                  style="font-size:22px;font-weight:700;color:var(--g800);background:none;border:none;outline:none;width:100%;padding:0;font-family:inherit;letter-spacing:-.03em;"
-                  oninput="const _d=nutGetActiveDay();_d.kg=parseFloat(this.value)||0;if(getActiveDate()===nutTodayKey()){nutState.kgToday=this.value;}nutPersist();const h=document.getElementById('nut-e-kg');if(h)h.value=this.value;"/>
-                <div style="font-size:9px;color:var(--g400);margin-top:2px;">kg</div>
+          <div class="nut-vcard nut-widget" id="nvc-pair-sp" draggable="true" data-nvc="pair-sp" data-span="1"
+            style="background:var(--white);border:1px solid var(--g100);border-radius:13px;padding:.6rem .75rem;">
+            <div class="nvc-widget-bar" style="background:transparent;margin:-.6rem -.75rem .4rem;padding:.4rem .75rem;">
+              <div class="nvc-handle">⠿</div>
+              <span style="font-size:13px;font-weight:600;color:var(--g700);">sono · peso</span>
+              <div class="nvc-widget-actions">
+                <button class="nvc-span-btn" onclick="nutToggleSpan(this)" title="largura">⇔</button>
+                <button class="nvc-collapse-btn" onclick="nutToggleCollapse(this)" title="colapsar">−</button>
               </div>
             </div>
+            <div class="nvc-widget-body">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+                <div>
+                  <div style="font-size:11px;color:var(--g500);margin-bottom:2px;">🌙 sono</div>
+                  <input id="nut-card-sleep" type="number" step="0.5" placeholder=""
+                    style="font-size:22px;font-weight:700;color:var(--g800);background:none;border:none;outline:none;width:100%;padding:0;font-family:inherit;letter-spacing:-.03em;"
+                    oninput="const _d=nutGetActiveDay();_d.sleep=parseFloat(this.value)||0;if(getActiveDate()===nutTodayKey()){nutState.sleep=this.value;}nutPersist();const h=document.getElementById('nut-e-sleep');if(h)h.value=this.value;"/>
+                  <div style="font-size:9px;color:var(--g400);">h</div>
+                </div>
+                <div>
+                  <div style="font-size:11px;color:var(--g500);margin-bottom:2px;">⚖️ peso</div>
+                  <input id="nut-card-kg" type="number" step="0.1" placeholder=""
+                    style="font-size:22px;font-weight:700;color:var(--g800);background:none;border:none;outline:none;width:100%;padding:0;font-family:inherit;letter-spacing:-.03em;"
+                    oninput="const _d=nutGetActiveDay();_d.kg=parseFloat(this.value)||0;if(getActiveDate()===nutTodayKey()){nutState.kgToday=this.value;}nutPersist();const h=document.getElementById('nut-e-kg');if(h)h.value=this.value;"/>
+                  <div style="font-size:9px;color:var(--g400);">kg</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-            <div class="nut-vcard" id="nvc-ker" draggable="true" data-nvc="ker"
-              style="background:var(--white);border:1px solid var(--g100);border-radius:13px;padding:.7rem .85rem;cursor:grab;">
+          <div class="nut-vcard nut-widget" id="nvc-ker" draggable="true" data-nvc="ker" data-span="1"
+            style="background:var(--white);border:1px solid var(--g100);border-radius:13px;padding:.7rem .85rem;">
+            <div class="nvc-widget-bar" style="background:transparent;margin:-.7rem -.85rem .4rem;padding:.5rem .85rem;">
               <div class="nvc-handle">⠿</div>
-              <div class="nut-vcard-label" data-key="ker">💊 queratina</div>
+              <div class="nut-vcard-label" data-key="ker" style="font-size:13px;font-weight:600;color:var(--g700);">💊 queratina</div>
+              <div class="nvc-widget-actions">
+                <button class="nvc-span-btn" onclick="nutToggleSpan(this)" title="largura">⇔</button>
+                <button class="nvc-collapse-btn" onclick="nutToggleCollapse(this)" title="colapsar">−</button>
+              </div>
+            </div>
+            <div class="nvc-widget-body">
               <div style="display:flex;gap:4px;margin-top:5px;">
-                <button onclick="nutSetKerCard(1)" id="nut-ker-1"
-                  style="flex:1;padding:4px 0;font-size:12px;font-weight:600;border:1.5px solid var(--g150);border-radius:7px;background:transparent;color:var(--g500);cursor:pointer;font-family:inherit;transition:all .15s;">1</button>
-                <button onclick="nutSetKerCard(2)" id="nut-ker-2"
-                  style="flex:1;padding:4px 0;font-size:12px;font-weight:600;border:1.5px solid var(--g150);border-radius:7px;background:transparent;color:var(--g500);cursor:pointer;font-family:inherit;transition:all .15s;">2</button>
-                <button onclick="nutSetKerCard(3)" id="nut-ker-3"
-                  style="flex:1;padding:4px 0;font-size:12px;font-weight:600;border:1.5px solid var(--g150);border-radius:7px;background:transparent;color:var(--g500);cursor:pointer;font-family:inherit;transition:all .15s;">3</button>
+                <button onclick="nutSetKerCard(1)" id="nut-ker-1" style="flex:1;padding:4px 0;font-size:12px;font-weight:600;border:1.5px solid var(--g150);border-radius:7px;background:transparent;color:var(--g500);cursor:pointer;font-family:inherit;transition:all .15s;">1</button>
+                <button onclick="nutSetKerCard(2)" id="nut-ker-2" style="flex:1;padding:4px 0;font-size:12px;font-weight:600;border:1.5px solid var(--g150);border-radius:7px;background:transparent;color:var(--g500);cursor:pointer;font-family:inherit;transition:all .15s;">2</button>
+                <button onclick="nutSetKerCard(3)" id="nut-ker-3" style="flex:1;padding:4px 0;font-size:12px;font-weight:600;border:1.5px solid var(--g150);border-radius:7px;background:transparent;color:var(--g500);cursor:pointer;font-family:inherit;transition:all .15s;">3</button>
               </div>
               <input type="hidden" id="nut-e-ker" value=""/>
             </div>
-
-            <!-- Progress -->
-            <div id="nut-daily-progress"></div>
-
           </div>
 
-        </div>
+          <div id="nut-daily-progress" class="nut-widget" data-span="2" style="grid-column:span 2;"></div>
 
-
+        </div><!-- /nut-widget-grid -->
 
         <!-- Hidden fields needed by nutSaveDay -->
         <input type="hidden" id="nut-e-sleep" value=""/>
@@ -8505,47 +8557,67 @@ function nutInit(){
 
 // ── FULL CROSS-COLUMN DRAG SYSTEM ──
 let _nutDragSrc = null;
-const NUT_COLS = ['nut-left-col','nut-mid-col','nut-right-col'];
+const NUT_COLS = ['nut-widget-grid']; // legacy compat
 
-function nutSaveLayout(){
-  const layout={};
-  NUT_COLS.forEach(cid=>{
-    const col=document.getElementById(cid);
-    if(!col) return;
-    layout[cid]=Array.from(col.querySelectorAll('.nut-vcard')).map(c=>c.id);
-  });
-  try{ localStorage.setItem('nutLayout', JSON.stringify(layout)); if(typeof saveState==='function') saveState(); }catch(e){}
+function nutToggleSpan(btn){
+  const card=btn.closest('.nut-widget');
+  if(!card) return;
+  const cur=card.dataset.span==='2'?'1':'2';
+  card.dataset.span=cur;
+  card.style.gridColumn=cur==='2'?'span 2':'';
+  nutSaveWidgetLayout();
 }
 
-function nutRestoreLayout(){
+function nutToggleCollapse(btn){
+  const card=btn.closest('.nut-widget');
+  if(!card) return;
+  card.classList.toggle('nvc-collapsed');
+  btn.textContent=card.classList.contains('nvc-collapsed')?'+':'−';
+  nutSaveWidgetLayout();
+}
+
+function nutSaveWidgetLayout(){
+  const grid=document.getElementById('nut-widget-grid');
+  if(!grid) return;
+  const layout=Array.from(grid.querySelectorAll('.nut-widget[id]')).map(c=>({
+    id:c.id, span:c.dataset.span||'1', collapsed:c.classList.contains('nvc-collapsed')
+  }));
+  try{ localStorage.setItem('nutWidgetLayout',JSON.stringify(layout)); if(typeof saveState==='function') saveState(); }catch(e){}
+}
+
+function nutRestoreWidgetLayout(){
   try{
-    const saved=localStorage.getItem('nutLayout');
+    const saved=localStorage.getItem('nutWidgetLayout');
     if(!saved) return;
     const layout=JSON.parse(saved);
-    Object.entries(layout).forEach(([cid,ids])=>{
-      const col=document.getElementById(cid);
-      if(!col) return;
-      ids.forEach(id=>{
-        const card=document.getElementById(id);
-        if(!card) return;
-        // If card is in a pair wrapper, take it out
-        const pair=card.closest('#nvc-pair-sp');
-        col.appendChild(card);
-        if(pair&&!pair.querySelector('.nut-vcard')) pair.remove();
-      });
+    const grid=document.getElementById('nut-widget-grid');
+    if(!grid) return;
+    // Reorder
+    layout.forEach(({id,span,collapsed})=>{
+      const card=document.getElementById(id);
+      if(!card) return;
+      card.dataset.span=span;
+      card.style.gridColumn=span==='2'?'span 2':'';
+      if(collapsed){ card.classList.add('nvc-collapsed'); const btn=card.querySelector('.nvc-collapse-btn'); if(btn) btn.textContent='+'; }
+      else { card.classList.remove('nvc-collapsed'); const btn=card.querySelector('.nvc-collapse-btn'); if(btn) btn.textContent='−'; }
+      grid.appendChild(card);
     });
-    // Re-attach progress div to right col
+    // progress always last
     const prog=document.getElementById('nut-daily-progress');
-    const rc=document.getElementById('nut-right-col');
-    if(prog&&rc&&!rc.contains(prog)) rc.appendChild(prog);
+    if(prog) grid.appendChild(prog);
   }catch(e){}
 }
 
-function nutInitVcardDrag(){
-  // Restore saved layout first
-  nutRestoreLayout();
+// legacy aliases
+function nutSaveLayout(){ nutSaveWidgetLayout(); }
+function nutRestoreLayout(){ nutRestoreWidgetLayout(); }
 
-  // Restore saved card labels
+let _nutDragSrc=null;
+
+function nutInitVcardDrag(){
+  nutRestoreWidgetLayout();
+
+  // Restore card labels
   try{
     const labels=JSON.parse(localStorage.getItem('nutCardLabels')||'{}');
     Object.entries(labels).forEach(([key,val])=>{
@@ -8562,7 +8634,7 @@ function nutInitVcardDrag(){
     });
   }catch(e){}
 
-  // Make labels editable + persist on blur
+  // Make labels editable
   document.querySelectorAll('.nut-vcard-label').forEach(el=>{
     el.setAttribute('contenteditable','true');
     el.setAttribute('spellcheck','false');
@@ -8577,77 +8649,61 @@ function nutInitVcardDrag(){
     });
   });
 
-  // Attach drag listeners to ALL 3 columns
-  NUT_COLS.forEach(cid=>{
-    const col=document.getElementById(cid);
-    if(!col) return;
+  // Widget drag-and-drop on the grid
+  const grid=document.getElementById('nut-widget-grid');
+  if(!grid) return;
 
-    col.addEventListener('dragstart',e=>{
-      const card=e.target.closest('.nut-vcard');
-      if(!card) return;
-      if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON'||
-         e.target.tagName==='TEXTAREA'||e.target.contentEditable==='true'){
-        e.preventDefault(); return;
-      }
-      _nutDragSrc=card;
-      e.dataTransfer.effectAllowed='move';
-      e.dataTransfer.setData('text/plain', card.id);
-      setTimeout(()=>card.classList.add('nvc-dragging'),0);
-    });
+  grid.addEventListener('dragstart',e=>{
+    const card=e.target.closest('.nut-widget');
+    if(!card) return;
+    if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON'||
+       e.target.tagName==='TEXTAREA'||e.target.contentEditable==='true'){
+      e.preventDefault(); return;
+    }
+    _nutDragSrc=card;
+    e.dataTransfer.effectAllowed='move';
+    e.dataTransfer.setData('text/plain',card.id);
+    setTimeout(()=>card.classList.add('nvc-dragging'),0);
+  });
 
-    col.addEventListener('dragend',()=>{
-      document.querySelectorAll('.nut-vcard.nvc-dragging').forEach(c=>c.classList.remove('nvc-dragging'));
-      document.querySelectorAll('.nut-vcard.nvc-over').forEach(c=>c.classList.remove('nvc-over'));
-      document.querySelectorAll('.nut-col-drop').forEach(c=>c.classList.remove('nut-col-drop'));
-      _nutDragSrc=null;
-      nutSaveLayout();
+  grid.addEventListener('dragend',()=>{
+    document.querySelectorAll('.nut-widget.nvc-dragging').forEach(c=>c.classList.remove('nvc-dragging'));
+    document.querySelectorAll('.nut-widget.nvc-drop-before,.nut-widget.nvc-drop-after').forEach(c=>{
+      c.classList.remove('nvc-drop-before','nvc-drop-after');
     });
+    _nutDragSrc=null;
+    nutSaveWidgetLayout();
+  });
 
-    col.addEventListener('dragover',e=>{
-      e.preventDefault();
-      const card=e.target.closest('.nut-vcard');
-      document.querySelectorAll('.nut-vcard.nvc-dragging-over').forEach(c=>c.classList.remove('nvc-dragging-over'));
-      document.querySelectorAll('.nut-col-drop').forEach(c=>c.classList.remove('nut-col-drop'));
-      if(card&&card!==_nutDragSrc){
-        card.classList.add('nvc-over');
-      } else if(!card){
-        col.classList.add('nut-col-drop');
-      }
+  grid.addEventListener('dragover',e=>{
+    e.preventDefault();
+    document.querySelectorAll('.nut-widget.nvc-drop-before,.nut-widget.nvc-drop-after').forEach(c=>{
+      c.classList.remove('nvc-drop-before','nvc-drop-after');
     });
+    const target=e.target.closest('.nut-widget');
+    if(target&&target!==_nutDragSrc&&target.id!=='nut-daily-progress'){
+      const rect=target.getBoundingClientRect();
+      const mid=rect.left+rect.width/2;
+      target.classList.add(e.clientX<mid?'nvc-drop-before':'nvc-drop-after');
+    }
+  });
 
-    col.addEventListener('dragleave',e=>{
-      if(!col.contains(e.relatedTarget)){
-        col.classList.remove('nut-col-drop');
-      }
+  grid.addEventListener('drop',e=>{
+    e.preventDefault();
+    document.querySelectorAll('.nut-widget.nvc-drop-before,.nut-widget.nvc-drop-after').forEach(c=>{
+      c.classList.remove('nvc-drop-before','nvc-drop-after');
     });
-
-    col.addEventListener('drop',e=>{
-      e.preventDefault();
-      col.classList.remove('nut-col-drop');
-      document.querySelectorAll('.nut-vcard.nvc-over').forEach(c=>c.classList.remove('nvc-over'));
-      if(!_nutDragSrc) return;
-      // Remove from pair wrapper if needed
-      const pair=_nutDragSrc.closest('#nvc-pair-sp');
-      if(pair) {
-        // Move the card out of the pair into col, then clean up empty pair
-        col.appendChild(_nutDragSrc);
-        if(!pair.querySelector('.nut-vcard')) pair.remove();
-      }
-      const card=e.target.closest('.nut-vcard');
-      if(card&&card!==_nutDragSrc){
-        // Insert before or after based on Y position
-        const rect=card.getBoundingClientRect();
-        const midY=rect.top+rect.height/2;
-        if(e.clientY<midY) col.insertBefore(_nutDragSrc,card);
-        else col.insertBefore(_nutDragSrc,card.nextSibling);
-      } else if(!card){
-        // Drop onto empty col space — append before progress
-        const prog=document.getElementById('nut-daily-progress');
-        if(prog&&col.contains(prog)) col.insertBefore(_nutDragSrc,prog);
-        else col.appendChild(_nutDragSrc);
-      }
-      nutSaveLayout();
-    });
+    if(!_nutDragSrc) return;
+    const target=e.target.closest('.nut-widget');
+    if(!target||target===_nutDragSrc||target.id==='nut-daily-progress') return;
+    const rect=target.getBoundingClientRect();
+    const mid=rect.left+rect.width/2;
+    if(e.clientX<mid) grid.insertBefore(_nutDragSrc,target);
+    else grid.insertBefore(_nutDragSrc,target.nextSibling);
+    // Keep progress last
+    const prog=document.getElementById('nut-daily-progress');
+    if(prog) grid.appendChild(prog);
+    nutSaveWidgetLayout();
   });
 }
 
