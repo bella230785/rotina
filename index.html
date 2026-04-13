@@ -3,24 +3,21 @@
 <head>
   <title>fresh ❤</title>
 <meta charset="UTF-8">
-<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display:ital@0;1&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <style>
 :root{
   --ff:'Schibsted Grotesk',sans-serif;
-  --ff-display:'Playfair Display',serif;
   --fs:13px;--lh:1.55;
   --accent:#7C6FCD;--accent-l:#F0EEF9;
   --red:#D05050;
   /* Warm neutral palette */
   --g50:#F8F7F5;--g100:#EEECE8;--g150:#E2DED8;--g200:#CECAC4;
   --g300:#ADA9A2;--g400:#8C8880;--g500:#6B6760;--g700:#3D3A35;--g800:#1C1A18;
-  --white:#FDFCFB;--radius:14px;
-  --shadow:0 2px 16px rgba(0,0,0,.07),0 1px 3px rgba(0,0,0,.05);
-  --card-outer-bg:#E8E4DC;
+  --white:#FDFCFB;--radius:11px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.06);
+  --card-outer-bg:#EDEAE4;
   /* Sidebar accent */
   --sb-accent:#7C6FCD;--sb-accent-l:#F0EEF9;
-  /* Sidebar always expanded */
-  --sb-w:220px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{
@@ -36,7 +33,7 @@ body{
 /* Card principal que envolve todo o app */
 .app-card{
   width:100%;height:100%;
-  background:var(--g50);
+  background:var(--white);
   border-radius:20px;
   overflow:hidden;
   display:flex;
@@ -44,12 +41,12 @@ body{
   box-shadow:0 12px 48px rgba(0,0,0,.14), 0 2px 8px rgba(0,0,0,.06);
 }
 /* sidebar width var updated by JS */
-:root{ --sb-w: 68px; }
+:root{ --sb-w: 210px; }
 
 /* ── SIDEBAR ── */
 /* ── SIDEBAR — pill icon design ── */
 .sidebar{
-  width:220px;flex-shrink:0;
+  width:68px;flex-shrink:0;
   background:var(--white);
   border-right:1px solid var(--g100);
   display:flex;flex-direction:column;
@@ -61,11 +58,11 @@ body{
   box-shadow:1px 0 0 var(--g100);
 }
 .sidebar.sb-expanded{
-  width:220px;
+  width:210px;
 }
 /* pill container that holds all nav icons */
 .sb-pill{
-  flex:1;display:flex;flex-direction:column;align-items:stretch;gap:2px;
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
   padding:0 10px;overflow-y:auto;overflow-x:hidden;
 }
 .sidebar.sb-expanded .sb-pill{ align-items:stretch; }
@@ -84,7 +81,7 @@ body{
 }
 .sb-logo-txt{
   font-size:15px;font-weight:700;color:var(--g800);letter-spacing:-.01em;
-  white-space:nowrap;overflow:hidden;opacity:1;width:auto;min-width:90px;
+  white-space:nowrap;overflow:hidden;opacity:0;width:0;
   transition:opacity .18s,width .22s;
   border:none;outline:none;background:none;font-family:inherit;cursor:text;
 }
@@ -93,7 +90,7 @@ body{
 /* hello text */
 .sb-hello-wrap{
   padding:0 10px 10px;overflow:hidden;
-  display:block;
+  display:none;
 }
 .sidebar.sb-expanded .sb-hello-wrap{ display:block; }
 .sb-hello{
@@ -106,12 +103,12 @@ body{
 /* nav items */
 .sb-nav-item{
   display:flex;align-items:center;gap:10px;
-  padding:0 10px;width:100%;height:40px;
-  border-radius:10px;
+  padding:0;width:44px;height:44px;
+  border-radius:14px;
   border:none;background:none;cursor:pointer;
   color:var(--g400);font-family:inherit;
   transition:all .15s cubic-bezier(.4,0,.2,1);
-  position:relative;flex-shrink:0;justify-content:flex-start;
+  position:relative;flex-shrink:0;justify-content:center;
   text-align:left;overflow:hidden;
 }
 .sidebar.sb-expanded .sb-nav-item{
@@ -129,7 +126,7 @@ body{
 }
 .sb-nav-label{
   font-size:13px;font-weight:500;white-space:nowrap;
-  opacity:1;width:auto;overflow:hidden;
+  opacity:0;width:0;overflow:hidden;
   transition:opacity .15s,width .22s;
 }
 .sidebar.sb-expanded .sb-nav-label{ opacity:1;width:auto; }
@@ -148,10 +145,10 @@ body{
 /* category dot items */
 .sb-cat-item{
   display:flex;align-items:center;gap:10px;
-  padding:0 10px;width:100%;height:32px;
-  border-radius:8px;border:none;background:none;cursor:pointer;
+  padding:0;width:44px;height:36px;
+  border-radius:12px;border:none;background:none;cursor:pointer;
   color:var(--g400);font-family:inherit;
-  transition:all .15s;position:relative;flex-shrink:0;justify-content:flex-start;
+  transition:all .15s;position:relative;flex-shrink:0;justify-content:center;
   overflow:hidden;
 }
 .sidebar.sb-expanded .sb-cat-item{
@@ -162,7 +159,7 @@ body{
 .sb-cat-dot{ width:8px;height:8px;border-radius:50%;flex-shrink:0; }
 .sb-cat-label{
   font-size:12px;font-weight:500;white-space:nowrap;
-  opacity:1;width:auto;overflow:hidden;transition:opacity .15s,width .22s;
+  opacity:0;width:0;overflow:hidden;transition:opacity .15s,width .22s;
 }
 .sidebar.sb-expanded .sb-cat-label{ opacity:1;width:auto; }
 
@@ -176,22 +173,28 @@ body{
 }
 .sidebar.sb-expanded .sb-bottom{ align-items:stretch; }
 .sb-util-btn{
-  width:100%;height:36px;border-radius:10px;border:none;background:none;
-  cursor:pointer;color:var(--g400);display:flex;align-items:center;justify-content:flex-start;
-  font-size:16px;transition:all .15s;gap:8px;flex-shrink:0;overflow:hidden;padding:0 10px;
+  width:44px;height:36px;border-radius:10px;border:none;background:none;
+  cursor:pointer;color:var(--g400);display:flex;align-items:center;justify-content:center;
+  font-size:16px;transition:all .15s;gap:8px;flex-shrink:0;overflow:hidden;
 }
 .sidebar.sb-expanded .sb-util-btn{ width:100%;justify-content:flex-start;padding:0 10px; }
 .sb-util-btn:hover{ background:var(--g50);color:var(--g700); }
 .sb-util-label{
   font-size:12px;font-weight:500;white-space:nowrap;
-  opacity:1;width:auto;overflow:hidden;transition:opacity .15s,width .22s;
+  opacity:0;width:0;overflow:hidden;transition:opacity .15s,width .22s;
 }
 .sidebar.sb-expanded .sb-util-label{ opacity:1;width:auto; }
 
 /* expand toggle tab */
 #sb-toggle-btn{
-  display:none;
+  position:absolute;right:-12px;top:50%;transform:translateY(-50%);
+  width:14px;height:36px;border-radius:0 8px 8px 0;
+  background:var(--white);border:1px solid var(--g100);border-left:none;
+  cursor:pointer;color:var(--g300);font-size:10px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:3px 0 8px rgba(0,0,0,.06);z-index:20;transition:all .15s;padding:0;
 }
+#sb-toggle-btn:hover{ color:var(--g600,var(--g500));background:var(--g50); }
 
 /* legacy compat */
 .sb-item{ display:none; }
@@ -1223,31 +1226,7 @@ button, input, select, textarea { font-size: var(--fs) !important; }
 
 
 /* Vitals card drag reorder */
-.nut-widget { position:relative; overflow:hidden; }
-.nvc-widget-bar {
-  display:flex;align-items:center;gap:6px;
-  background:var(--g50);
-  margin:-.75rem -.9rem .6rem -.9rem;
-  padding:.4rem .6rem .4rem .5rem;
-  border-radius:12px 12px 0 0;
-  border-bottom:1px solid var(--g100);
-}
-.nvc-widget-bar .nvc-handle { color:var(--g300);cursor:grab;font-size:13px;flex-shrink:0; }
-.nvc-widget-bar > *:not(.nvc-handle):not(.nvc-widget-actions) { flex:1;min-width:0; }
-.nvc-widget-actions { display:none;align-items:center;gap:2px;flex-shrink:0; }
-.nut-widget:hover .nvc-widget-actions { display:flex; }
-.nvc-span-btn, .nvc-collapse-btn {
-  font-size:12px;background:none;border:none;cursor:pointer;
-  color:var(--g400);padding:2px 6px;border-radius:4px;font-family:inherit;line-height:1;
-  transition:background .1s,color .1s;
-}
-.nvc-span-btn:hover, .nvc-collapse-btn:hover { background:var(--g150);color:var(--g700); }
-.nut-widget[data-span="2"] { grid-column:span 2; }
-.nut-widget.nvc-collapsed .nvc-widget-body { display:none; }
-.nvc-collapsed .nvc-widget-bar { border-radius:12px;border-bottom:none;margin-bottom:-.75rem; }
-.nut-widget.nvc-dragging { opacity:.35; }
-.nut-widget.nvc-drop-before { outline:2px solid var(--accent);outline-offset:2px; }
-.nut-widget.nvc-drop-after { outline:2px solid var(--accent);outline-offset:2px; }
+.nut-vcard { transition:box-shadow .15s, opacity .15s, transform .15s; user-select:none; position:relative; }
 /* Card color picker */
 #nut-card-color-picker{position:fixed;z-index:500;background:var(--white);border:1px solid var(--g150);border-radius:14px;padding:10px;box-shadow:0 8px 28px rgba(0,0,0,.14);display:flex;flex-direction:column;gap:8px;min-width:160px;}
 .ncc-row{display:flex;gap:5px;flex-wrap:wrap;}
@@ -1255,7 +1234,6 @@ button, input, select, textarea { font-size: var(--fs) !important; }
 .ncc-dot:hover{transform:scale(1.25);border-color:var(--g300);}
 .nut-vcard .nvc-handle { position:absolute;top:7px;right:8px;opacity:0;transition:opacity .15s;cursor:grab;font-size:11px;color:var(--g300);line-height:1; }
 .nut-vcard:hover .nvc-handle { opacity:1; }
-.nvc-widget-bar .nvc-handle { position:static;opacity:1;font-size:13px; }
 .nut-vcard:active { cursor:grabbing; }
 .nut-vcard.nvc-dragging { opacity:.3; box-shadow:none; transform:scale(.97); }
 .nut-vcard.nvc-over { box-shadow:0 0 0 2px var(--sb-accent,#7C6FCD); transform:scale(1.01); }
@@ -1276,9 +1254,8 @@ button, input, select, textarea { font-size: var(--fs) !important; }
 /* ── NUTRIÇÃO VIEW ── */
 #view-nutricao { position:relative; }
 
-.nut-card { background:var(--white); border:1px solid var(--g100); border-radius:var(--radius); padding:.85rem 1rem; transition:box-shadow .18s; box-shadow:var(--shadow); }
+.nut-card { background:var(--white); border:1px solid var(--g100); border-radius:14px; padding:.75rem .9rem; transition:box-shadow .18s; }
 .nut-card-title { font-size:10px; font-weight:700; color:var(--g400); margin-bottom:.5rem; letter-spacing:.06em; text-transform:uppercase; }
-.nvc-widget-bar .nut-card-title { font-size:13px; font-weight:600; color:var(--g700); text-transform:none; letter-spacing:normal; margin-bottom:0; }
 
 /* Shared card style for welcome widgets */
 .nut-card {
@@ -1359,20 +1336,6 @@ button, input, select, textarea { font-size: var(--fs) !important; }
 /* Priority star in task detail */
 #td-star-btn { transition:all .2s; }
 #td-star-btn:hover { transform:scale(1.2); }
-
-/* Playfair Display on headings */
-.task-panel-cat-title,
-.nut-vcard-label[data-key="nexus"],
-.nut-vcard-label[data-key="hoje"],
-.nut-vcard-label[data-key="treino"],
-.nut-vcard-label[data-key="ker"],
-.nut-vcard-label[data-key="water"],
-.nut-vcard-label[data-key="vit"],
-.tp-cat-group-name,
-.sb-logo-txt {
-  font-family:var(--ff-display) !important;
-  letter-spacing:-.01em !important;
-}
 </style>
 </head>
 <body>
@@ -1480,7 +1443,7 @@ button, input, select, textarea { font-size: var(--fs) !important; }
 </div>
 
 <!-- SIDEBAR TOGGLE -->
-<button id="sb-toggle-btn" onclick="toggleSidebar()" title="Expandir/recolher sidebar">›</button>
+<button id="sb-toggle-btn" onclick="toggleSidebar()" title="Expandir/recolher sidebar">‹</button>
 
 <!-- TASK PANEL -->
 <div class="task-panel" id="task-panel">
@@ -1612,23 +1575,9 @@ button, input, select, textarea { font-size: var(--fs) !important; }
             <div>
               <div style="font-size:22px;font-weight:400;color:var(--g800);letter-spacing:-.01em;line-height:1.2;font-family:'DM Serif Display',serif;">hey you! 👋</div>
               <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
-                <div style="position:relative;display:inline-flex;align-items:center;">
-                  <button onclick="document.getElementById('nut-date-picker').showPicker?document.getElementById('nut-date-picker').showPicker():document.getElementById('nut-date-picker').click()" style="display:flex;align-items:center;gap:5px;background:none;border:none;cursor:pointer;padding:0;color:var(--g400);transition:color .1s;" onmouseenter="this.style.color='var(--g800)'" onmouseleave="this.style.color='var(--g400)'">
-                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="16" height="14" rx="2"/><path d="M6 2v4M14 2v4M2 9h16"/></svg>
-                    <span id="nut-welcome-date" style="font-size:13px;color:var(--g400);"></span>
-                  </button>
-                  <input type="date" id="nut-date-picker" max=""
-                    style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;"
-                    onchange="
-                      _nutActiveDate=this.value;
-                      const inputEl=document.getElementById('nut-active-date');
-                      if(inputEl) inputEl.value=this.value;
-                      nutLoadDay();
-                      nutRenderWelcomeDate();
-                      const nb=document.getElementById('nut-nav-next');
-                      if(nb) nb.style.opacity=(this.value>=nutTodayKey()?'.3':'1');
-                    "/>
-                </div>
+                <button onclick="nutNavDay(-1)" style="font-size:14px;line-height:1;background:none;border:none;cursor:pointer;color:var(--g400);padding:0 3px;transition:color .1s;" onmouseenter="this.style.color='var(--g800)'" onmouseleave="this.style.color='var(--g400)'">‹</button>
+                <div style="font-size:13px;color:var(--g400);" id="nut-welcome-date"></div>
+                <button onclick="nutNavDay(1)" id="nut-nav-next" style="font-size:14px;line-height:1;background:none;border:none;cursor:pointer;color:var(--g400);padding:0 3px;transition:color .1s;" onmouseenter="this.style.color='var(--g800)'" onmouseleave="this.style.color='var(--g400)'">›</button>
               </div>
             </div>
           </div>
@@ -1646,145 +1595,116 @@ button, input, select, textarea { font-size: var(--fs) !important; }
           </div>
         </div>
 
-        <!-- Widget grid — 2 colunas, cards draggáveis -->
-        <div id="nut-widget-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;align-items:start;margin-bottom:1.25rem;">
+        <!-- Three columns: left | middle | right sidebar -->
+        <div style="display:grid;grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr) minmax(0,.85fr);gap:1rem;align-items:start;margin-bottom:1.25rem;">
 
-          <div class="nut-card nut-vcard nut-widget" id="nvc-water" draggable="true" data-nvc="water" data-span="1">
-            <div class="nvc-widget-bar">
+          <!-- LEFT COLUMN: water + vitamins -->
+          <div id="nut-left-col" style="display:flex;flex-direction:column;gap:.625rem;">
+
+            <div class="nut-card nut-vcard" id="nvc-water" draggable="true" data-nvc="water">
               <div class="nvc-handle">⠿</div>
               <div class="nut-vcard-label nut-card-title" data-key="water" contenteditable="true" spellcheck="false">did you drink water yet? 💧</div>
-              <div class="nvc-widget-actions">
-                <button class="nvc-span-btn" onclick="nutToggleSpan(this)" title="largura">⇔</button>
-                <button class="nvc-collapse-btn" onclick="nutToggleCollapse(this)" title="colapsar">−</button>
-              </div>
-            </div>
-            <div class="nvc-widget-body">
               <div id="nut-water-checks" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
               <div style="font-size:10px;color:var(--g400);margin-top:5px;" id="nut-water-ml"></div>
               <div contenteditable="true" spellcheck="false" data-key="water-note"
                 style="font-size:11px;color:var(--g500);margin-top:7px;padding:5px 0;border-top:1px solid var(--g50);outline:none;min-height:18px;line-height:1.5;cursor:text;"
-                onblur="nutSaveCardNote('water-note',this.textContent.trim())"></div>
+                placeholder="nota..."
+                onblur="nutSaveCardNote('water-note',this.textContent.trim())"
+                onfocus="if(!this.textContent.trim())this.textContent=''"
+              ></div>
             </div>
-          </div>
 
-          <div class="nut-card nut-vcard nut-widget" id="nvc-vit" draggable="true" data-nvc="vit" data-span="1">
-            <div class="nvc-widget-bar">
+            <div class="nut-card nut-vcard" id="nvc-vit" draggable="true" data-nvc="vit">
               <div class="nvc-handle">⠿</div>
               <div class="nut-vcard-label nut-card-title" data-key="vit" contenteditable="true" spellcheck="false">earn your glow ✨</div>
-              <div class="nvc-widget-actions">
-                <button class="nvc-span-btn" onclick="nutToggleSpan(this)" title="largura">⇔</button>
-                <button class="nvc-collapse-btn" onclick="nutToggleCollapse(this)" title="colapsar">−</button>
-              </div>
-            </div>
-            <div class="nvc-widget-body">
               <div id="nut-vit-grid"></div>
               <div contenteditable="true" spellcheck="false" data-key="vit-note"
                 style="font-size:11px;color:var(--g500);margin-top:7px;padding:5px 0;border-top:1px solid var(--g50);outline:none;min-height:18px;line-height:1.5;cursor:text;"
-                onblur="nutSaveCardNote('vit-note',this.textContent.trim())"></div>
+                placeholder="nota..."
+                onblur="nutSaveCardNote('vit-note',this.textContent.trim())"
+              ></div>
             </div>
+
           </div>
 
-          <div class="nut-card nut-vcard nut-widget" id="nvc-nexus" draggable="true" data-nvc="nexus" data-span="1" style="background:var(--white);border:1px solid var(--g100);">
-            <div class="nvc-widget-bar">
+          <!-- MIDDLE COLUMN: nexus top, tasks below -->
+          <div id="nut-mid-col" style="display:flex;flex-direction:column;gap:.625rem;">
+
+            <div class="nut-card nut-vcard" id="nvc-nexus" draggable="true" data-nvc="nexus" style="background:var(--white);border:1px solid var(--g100);">
               <div class="nvc-handle">⠿</div>
-              <div class="nut-vcard-label" data-key="nexus" contenteditable="true" spellcheck="false" style="color:var(--g700);font-size:15px;font-weight:600;letter-spacing:.01em;">nexus</div>
-              <div class="nvc-widget-actions">
-                <button class="nvc-span-btn" onclick="nutToggleSpan(this)" title="largura">⇔</button>
-                <button class="nvc-collapse-btn" onclick="nutToggleCollapse(this)" title="colapsar">−</button>
-              </div>
-            </div>
-            <div class="nvc-widget-body" style="margin-top:.5rem;">
+              <div class="nut-vcard-label" data-key="nexus" contenteditable="true" spellcheck="false" style="color:var(--g700);font-size:15px;font-weight:600;letter-spacing:.01em;margin-bottom:.5rem;display:block;">nexus</div>
               <div id="nut-nexus-quote" style="font-size:15px;color:var(--g700,#3D3A35);font-style:italic;margin-bottom:.625rem;line-height:1.6;"></div>
               <div id="nut-nexus-next" style="font-size:15px;font-weight:500;color:#5A50B8;line-height:1.5;"></div>
             </div>
-          </div>
 
-          <div class="nut-card nut-vcard nut-widget" id="nvc-hoje" draggable="true" data-nvc="hoje" data-span="1">
-            <div class="nvc-widget-bar">
+            <div class="nut-card nut-vcard" id="nvc-hoje" draggable="true" data-nvc="hoje">
               <div class="nvc-handle">⠿</div>
-              <div class="nut-vcard-label" data-key="hoje" contenteditable="true" spellcheck="false" style="font-size:15px;font-weight:600;color:var(--g700);letter-spacing:.01em;">hoje</div>
-              <div class="nvc-widget-actions">
-                <button class="nvc-span-btn" onclick="nutToggleSpan(this)" title="largura">⇔</button>
-                <button class="nvc-collapse-btn" onclick="nutToggleCollapse(this)" title="colapsar">−</button>
-              </div>
-            </div>
-            <div class="nvc-widget-body" style="margin-top:.5rem;">
+              <div class="nut-vcard-label" data-key="hoje" contenteditable="true" spellcheck="false" style="font-size:15px;font-weight:600;color:var(--g700);letter-spacing:.01em;margin-bottom:.5rem;display:block;">hoje</div>
               <div id="nut-today-tasks" style="display:flex;flex-direction:column;gap:4px;font-size:14px;"></div>
             </div>
+
           </div>
 
-          <div class="nut-vcard nut-widget" id="nvc-treino" draggable="true" data-nvc="treino" data-span="1"
-            style="background:#f2f2f2;border:1px solid var(--g100);border-radius:13px;padding:.7rem .85rem;">
-            <div class="nvc-widget-bar" style="background:transparent;margin:-.7rem -.85rem .4rem;padding:.5rem .85rem;">
+          <!-- RIGHT COLUMN: draggable vitals + treino -->
+          <div id="nut-right-col" style="display:flex;flex-direction:column;gap:.625rem;">
+
+            <!-- Treino card — TOP, coloured background -->
+            <div class="nut-vcard" id="nvc-treino" draggable="true" data-nvc="treino"
+              style="background:#f2f2f2;border:1px solid var(--g100);border-radius:13px;padding:.7rem .85rem;cursor:grab;">
               <div class="nvc-handle">⠿</div>
-              <div class="nut-vcard-label" data-key="treino" style="display:flex;align-items:center;gap:4px;color:var(--g700);font-size:15px;font-weight:600;">
-                <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="var(--g700)" stroke-width="2" stroke-linecap="round"><path d="M4 10h2l2-6 4 12 2-6h2"/></svg>treino hoje
+              <div class="nut-vcard-label" data-key="treino" style="color:var(--g700);font-size:15px;font-weight:600;margin-bottom:.35rem;display:block;">
+                <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="var(--g700)" stroke-width="2" stroke-linecap="round" style="margin-right:4px;vertical-align:middle;"><path d="M4 10h2l2-6 4 12 2-6h2"/></svg>treino hoje
               </div>
-              <div class="nvc-widget-actions">
-                <button class="nvc-span-btn" onclick="nutToggleSpan(this)" title="largura">⇔</button>
-                <button class="nvc-collapse-btn" onclick="nutToggleCollapse(this)" title="colapsar">−</button>
-              </div>
-            </div>
-            <div class="nvc-widget-body">
-              <div id="nut-treino-hoje" style="font-size:15px;font-weight:500;color:#5A50B8;margin-bottom:6px;">—</div>
+              <div id="nut-treino-hoje" style="font-size:15px;font-weight:500;color:#5A50B8;margin-bottom:6px;margin-top:5px;">—</div>
               <div id="nut-treino-count" style="font-size:12px;color:#9B8FCC;margin-bottom:6px;"></div>
               <div id="nut-treino-cal"></div>
             </div>
-          </div>
 
-          <div class="nut-vcard nut-widget" id="nvc-pair-sp" draggable="true" data-nvc="pair-sp" data-span="1"
-            style="background:var(--white);border:1px solid var(--g100);border-radius:13px;padding:.6rem .75rem;">
-            <div class="nvc-widget-bar" style="background:transparent;margin:-.6rem -.75rem .4rem;padding:.4rem .75rem;">
-              <div class="nvc-handle">⠿</div>
-              <span style="font-size:13px;font-weight:600;color:var(--g700);">sono · peso</span>
-              <div class="nvc-widget-actions">
-                <button class="nvc-span-btn" onclick="nutToggleSpan(this)" title="largura">⇔</button>
-                <button class="nvc-collapse-btn" onclick="nutToggleCollapse(this)" title="colapsar">−</button>
+            <!-- sono + peso side by side -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;" id="nvc-pair-sp">
+              <div class="nut-vcard" id="nvc-sleep" draggable="true" data-nvc="sleep"
+                style="background:var(--white);border:1px solid var(--g100);border-radius:13px;padding:.6rem .75rem;cursor:grab;">
+                <div class="nvc-handle">⠿</div>
+                <div class="nut-vcard-label" data-key="sleep">🌙 sono</div>
+                <input id="nut-card-sleep" type="number" step="0.5" placeholder=""
+                  style="font-size:22px;font-weight:700;color:var(--g800);background:none;border:none;outline:none;width:100%;padding:0;font-family:inherit;letter-spacing:-.03em;"
+                  oninput="const _d=nutGetActiveDay();_d.sleep=parseFloat(this.value)||0;if(getActiveDate()===nutTodayKey()){nutState.sleep=this.value;}nutPersist();const h=document.getElementById('nut-e-sleep');if(h)h.value=this.value;"/>
+                <div style="font-size:9px;color:var(--g400);margin-top:2px;">h</div>
+              </div>
+              <div class="nut-vcard" id="nvc-kg" draggable="true" data-nvc="kg"
+                style="background:var(--white);border:1px solid var(--g100);border-radius:13px;padding:.6rem .75rem;cursor:grab;">
+                <div class="nvc-handle">⠿</div>
+                <div class="nut-vcard-label" data-key="kg">⚖️ peso</div>
+                <input id="nut-card-kg" type="number" step="0.1" placeholder=""
+                  style="font-size:22px;font-weight:700;color:var(--g800);background:none;border:none;outline:none;width:100%;padding:0;font-family:inherit;letter-spacing:-.03em;"
+                  oninput="const _d=nutGetActiveDay();_d.kg=parseFloat(this.value)||0;if(getActiveDate()===nutTodayKey()){nutState.kgToday=this.value;}nutPersist();const h=document.getElementById('nut-e-kg');if(h)h.value=this.value;"/>
+                <div style="font-size:9px;color:var(--g400);margin-top:2px;">kg</div>
               </div>
             </div>
-            <div class="nvc-widget-body">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
-                <div>
-                  <div style="font-size:11px;color:var(--g500);margin-bottom:2px;">🌙 sono</div>
-                  <input id="nut-card-sleep" type="number" step="0.5" placeholder=""
-                    style="font-size:22px;font-weight:700;color:var(--g800);background:none;border:none;outline:none;width:100%;padding:0;font-family:inherit;letter-spacing:-.03em;"
-                    oninput="const _d=nutGetActiveDay();_d.sleep=parseFloat(this.value)||0;if(getActiveDate()===nutTodayKey()){nutState.sleep=this.value;}nutPersist();const h=document.getElementById('nut-e-sleep');if(h)h.value=this.value;"/>
-                  <div style="font-size:9px;color:var(--g400);">h</div>
-                </div>
-                <div>
-                  <div style="font-size:11px;color:var(--g500);margin-bottom:2px;">⚖️ peso</div>
-                  <input id="nut-card-kg" type="number" step="0.1" placeholder=""
-                    style="font-size:22px;font-weight:700;color:var(--g800);background:none;border:none;outline:none;width:100%;padding:0;font-family:inherit;letter-spacing:-.03em;"
-                    oninput="const _d=nutGetActiveDay();_d.kg=parseFloat(this.value)||0;if(getActiveDate()===nutTodayKey()){nutState.kgToday=this.value;}nutPersist();const h=document.getElementById('nut-e-kg');if(h)h.value=this.value;"/>
-                  <div style="font-size:9px;color:var(--g400);">kg</div>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <div class="nut-vcard nut-widget" id="nvc-ker" draggable="true" data-nvc="ker" data-span="1"
-            style="background:var(--white);border:1px solid var(--g100);border-radius:13px;padding:.7rem .85rem;">
-            <div class="nvc-widget-bar" style="background:transparent;margin:-.7rem -.85rem .4rem;padding:.5rem .85rem;">
+            <div class="nut-vcard" id="nvc-ker" draggable="true" data-nvc="ker"
+              style="background:var(--white);border:1px solid var(--g100);border-radius:13px;padding:.7rem .85rem;cursor:grab;">
               <div class="nvc-handle">⠿</div>
-              <div class="nut-vcard-label" data-key="ker" style="font-size:13px;font-weight:600;color:var(--g700);">💊 queratina</div>
-              <div class="nvc-widget-actions">
-                <button class="nvc-span-btn" onclick="nutToggleSpan(this)" title="largura">⇔</button>
-                <button class="nvc-collapse-btn" onclick="nutToggleCollapse(this)" title="colapsar">−</button>
-              </div>
-            </div>
-            <div class="nvc-widget-body">
+              <div class="nut-vcard-label" data-key="ker">💊 queratina</div>
               <div style="display:flex;gap:4px;margin-top:5px;">
-                <button onclick="nutSetKerCard(1)" id="nut-ker-1" style="flex:1;padding:4px 0;font-size:12px;font-weight:600;border:1.5px solid var(--g150);border-radius:7px;background:transparent;color:var(--g500);cursor:pointer;font-family:inherit;transition:all .15s;">1</button>
-                <button onclick="nutSetKerCard(2)" id="nut-ker-2" style="flex:1;padding:4px 0;font-size:12px;font-weight:600;border:1.5px solid var(--g150);border-radius:7px;background:transparent;color:var(--g500);cursor:pointer;font-family:inherit;transition:all .15s;">2</button>
-                <button onclick="nutSetKerCard(3)" id="nut-ker-3" style="flex:1;padding:4px 0;font-size:12px;font-weight:600;border:1.5px solid var(--g150);border-radius:7px;background:transparent;color:var(--g500);cursor:pointer;font-family:inherit;transition:all .15s;">3</button>
+                <button onclick="nutSetKerCard(1)" id="nut-ker-1"
+                  style="flex:1;padding:4px 0;font-size:12px;font-weight:600;border:1.5px solid var(--g150);border-radius:7px;background:transparent;color:var(--g500);cursor:pointer;font-family:inherit;transition:all .15s;">1</button>
+                <button onclick="nutSetKerCard(2)" id="nut-ker-2"
+                  style="flex:1;padding:4px 0;font-size:12px;font-weight:600;border:1.5px solid var(--g150);border-radius:7px;background:transparent;color:var(--g500);cursor:pointer;font-family:inherit;transition:all .15s;">2</button>
+                <button onclick="nutSetKerCard(3)" id="nut-ker-3"
+                  style="flex:1;padding:4px 0;font-size:12px;font-weight:600;border:1.5px solid var(--g150);border-radius:7px;background:transparent;color:var(--g500);cursor:pointer;font-family:inherit;transition:all .15s;">3</button>
               </div>
               <input type="hidden" id="nut-e-ker" value=""/>
             </div>
+
+            <!-- Progress -->
+            <div id="nut-daily-progress"></div>
+
           </div>
 
-          <div id="nut-daily-progress" class="nut-widget" data-span="2" style="grid-column:span 2;"></div>
+        </div>
 
-        </div><!-- /nut-widget-grid -->
+
 
         <!-- Hidden fields needed by nutSaveDay -->
         <input type="hidden" id="nut-e-sleep" value=""/>
@@ -7469,13 +7389,13 @@ function loadState(){
 loadState();
 renderCal();renderPicker();renderSidebarCats();
 try{
-  if(localStorage.getItem('sbExpanded')==='1'){
-    sidebarExpanded=true;
+  if(localStorage.getItem('sbExpanded')==='0'){
+    sidebarExpanded=false;
     const sb=document.getElementById('sidebar');
     const btn=document.getElementById('sb-toggle-btn');
-    if(sb) sb.classList.add('sb-expanded');
-    if(btn) btn.textContent='‹';
-    document.documentElement.style.setProperty('--sb-w','210px');
+    if(sb) sb.classList.remove('sb-expanded');
+    if(btn) btn.textContent='›';
+    document.documentElement.style.setProperty('--sb-w','68px');
   }
 }catch(e){}
 setTimeout(()=>{const nb=document.getElementById('tab-nutricao');if(nb)switchView('nutricao',nb);},200);
@@ -7604,7 +7524,7 @@ function buildSnapshot(){
 
   // Gather nut UI state from localStorage (transient UI prefs)
   const nutUI = {
-    widgetLayout: safeLS('nutWidgetLayout'),
+    layout:      safeLS('nutLayout'),
     cardLabels:  safeLS('nutCardLabels'),
     cardNotes:   safeLS('nutCardNotes'),
     inspiration: localStorage.getItem('nutInspirationText')||null,
@@ -7671,36 +7591,17 @@ function applySnapshot(snap){
   if(snap.nutState){
     const sn=snap.nutState;
     const merged={};
-    // Primeiro aplica Supabase
-    (sn.days||[]).forEach(d=>{ merged[d.date]=d; });
-    // Depois sobrescreve com local SE o local tiver _foods ou vit mais recentes para hoje
-    const _today=nutTodayKey();
-    nutState.days.forEach(d=>{
-      if(d.date===_today){
-        // Para hoje: manter o local se tiver mais dados que o remoto
-        const remote=merged[_today];
-        const localHasMore = (
-          (d._foods&&d._foods.length>(remote?._foods?.length||0)) ||
-          (d.water>(remote?.water||0)) ||
-          ((d.poly||d.nourkrin||d.vitaD||d.ferro||d.creatina||d.minoxidil||d.magnesio) &&
-           !(remote?.poly||remote?.nourkrin||remote?.vitaD||remote?.ferro||remote?.creatina||remote?.minoxidil||remote?.magnesio))
-        );
-        if(localHasMore) merged[_today]=d;
-      } else {
-        if(!merged[d.date]) merged[d.date]=d;
-      }
-    });
+    nutState.days.forEach(d=>merged[d.date]=d);
+    (sn.days||[]).forEach(d=>merged[d.date]=d);
     Object.assign(nutState, sn);
     nutState.days=Object.values(merged).sort((a,b)=>a.date.localeCompare(b.date));
 
-    // Re-derive live state from today's day record
+    // Always re-derive live state (foods/vit/water) from today's day record
+    // to avoid stale data from a previous session bleeding into today
+    const _today=nutTodayKey();
     const _todayRec=nutState.days.find(d=>d.date===_today);
     if(_todayRec){
-      // Merge: prefer live nutState.vit/waterChecks/foods if they have more data than the record
-      const liveHasMoreVit=Object.keys(nutState.vit||{}).length>0;
-      const liveHasMoreWater=(nutState.waterChecks||0)>0;
-      const liveHasMoreFoods=(nutState.foods||[]).length>0;
-
+      nutState.foods=_todayRec._foods||[];
       nutState.vit={};
       if(_todayRec.poly)      nutState.vit['0-0']=true;
       if(_todayRec.nourkrin)  nutState.vit['0-1']=true;
@@ -7711,8 +7612,8 @@ function applySnapshot(snap){
       if(_todayRec.minoxidil) nutState.vit['2-1']=true;
       if(_todayRec.magnesio)  nutState.vit['2-2']=true;
       nutState.waterChecks=_todayRec.water?Math.min(4,Math.round(_todayRec.water/500)):0;
-      nutState.foods=_todayRec._foods||[];
     } else {
+      // No record for today — start fresh
       nutState.foods=[];
       nutState.vit={};
       nutState.waterChecks=0;
@@ -7720,13 +7621,12 @@ function applySnapshot(snap){
     nutState.lastDate=_today;
 
     nutPersist();
+    // Re-inject custom foods into FOODS array
     if(typeof loadCustomFoods==='function') loadCustomFoods();
   }
   if(snap.nutUI){
     const u=snap.nutUI;
-    // nutLayout é formato antigo (3 colunas) — ignorar para não quebrar o novo grid
-    // if(u.layout) localStorage.setItem('nutLayout', JSON.stringify(u.layout));
-    if(u.widgetLayout) localStorage.setItem('nutWidgetLayout', JSON.stringify(u.widgetLayout));
+    if(u.layout)      localStorage.setItem('nutLayout',      JSON.stringify(u.layout));
     if(u.cardLabels)  localStorage.setItem('nutCardLabels',  JSON.stringify(u.cardLabels));
     if(u.cardNotes)   localStorage.setItem('nutCardNotes',   JSON.stringify(u.cardNotes));
     if(u.inspiration) localStorage.setItem('nutInspirationText', u.inspiration);
@@ -8554,7 +8454,6 @@ function nutRenderOverviewContent(){
 function nutInit(){
   if(window._nutInited) return;
   window._nutInited=true;
-  nutRestoreWidgetLayout();
   nutRenderWelcomeDate();
   nutRenderMetrics();nutRenderFoodList();nutRenderVitamins();nutRenderWater();
   nutUpdateDateDisplay();nutRenderDailyProgress();nutRenderWeekRings();
@@ -8564,77 +8463,57 @@ function nutInit(){
   nutRenderTreinoWidget();
   const sheetEl=document.getElementById('nut-sheets-url');
   if(sheetEl && nutState.sheetsUrl) sheetEl.value=nutState.sheetsUrl;
+  // Ensure we start at the top
   setTimeout(()=>{ const w=document.getElementById('nut-welcome'); if(w) w.scrollTop=0; }, 50);
-  setTimeout(nutInitVcardDrag, 50);
+  // Init vitals card drag
+  setTimeout(nutInitVcardDrag, 100);
   nutRenderOverviewContent();
-  function nutRestoreCardColors(){}
+  setTimeout(nutRestoreCardColors, 200);
 }
 
 // ── FULL CROSS-COLUMN DRAG SYSTEM ──
 let _nutDragSrc = null;
-const NUT_COLS = ['nut-widget-grid']; // legacy compat
+const NUT_COLS = ['nut-left-col','nut-mid-col','nut-right-col'];
 
-function nutToggleSpan(btn){
-  const card=btn.closest('.nut-widget');
-  if(!card) return;
-  const cur=card.dataset.span==='2'?'1':'2';
-  card.dataset.span=cur;
-  card.style.gridColumn=cur==='2'?'span 2':'';
-  nutSaveWidgetLayout();
+function nutSaveLayout(){
+  const layout={};
+  NUT_COLS.forEach(cid=>{
+    const col=document.getElementById(cid);
+    if(!col) return;
+    layout[cid]=Array.from(col.querySelectorAll('.nut-vcard')).map(c=>c.id);
+  });
+  try{ localStorage.setItem('nutLayout', JSON.stringify(layout)); if(typeof saveState==='function') saveState(); }catch(e){}
 }
 
-function nutToggleCollapse(btn){
-  const card=btn.closest('.nut-widget');
-  if(!card) return;
-  card.classList.toggle('nvc-collapsed');
-  btn.textContent=card.classList.contains('nvc-collapsed')?'+':'−';
-  nutSaveWidgetLayout();
-}
-
-function nutSaveWidgetLayout(){
-  const grid=document.getElementById('nut-widget-grid');
-  if(!grid) return;
-  const layout=Array.from(grid.querySelectorAll('.nut-widget[id]')).map(c=>({
-    id:c.id, span:c.dataset.span||'1', collapsed:c.classList.contains('nvc-collapsed')
-  }));
-  try{ localStorage.setItem('nutWidgetLayout',JSON.stringify(layout)); if(typeof saveState==='function') saveState(); }catch(e){}
-}
-
-function nutRestoreWidgetLayout(){
+function nutRestoreLayout(){
   try{
-    // Limpar layout antigo (3 colunas) para não interferir
-    localStorage.removeItem('nutLayout');
-    const saved=localStorage.getItem('nutWidgetLayout');
+    const saved=localStorage.getItem('nutLayout');
     if(!saved) return;
     const layout=JSON.parse(saved);
-    const grid=document.getElementById('nut-widget-grid');
-    if(!grid) return;
-    // Reorder
-    layout.forEach(({id,span,collapsed})=>{
-      const card=document.getElementById(id);
-      if(!card) return;
-      card.dataset.span=span;
-      card.style.gridColumn=span==='2'?'span 2':'';
-      if(collapsed){ card.classList.add('nvc-collapsed'); const btn=card.querySelector('.nvc-collapse-btn'); if(btn) btn.textContent='+'; }
-      else { card.classList.remove('nvc-collapsed'); const btn=card.querySelector('.nvc-collapse-btn'); if(btn) btn.textContent='−'; }
-      grid.appendChild(card);
+    Object.entries(layout).forEach(([cid,ids])=>{
+      const col=document.getElementById(cid);
+      if(!col) return;
+      ids.forEach(id=>{
+        const card=document.getElementById(id);
+        if(!card) return;
+        // If card is in a pair wrapper, take it out
+        const pair=card.closest('#nvc-pair-sp');
+        col.appendChild(card);
+        if(pair&&!pair.querySelector('.nut-vcard')) pair.remove();
+      });
     });
-    // progress always last
+    // Re-attach progress div to right col
     const prog=document.getElementById('nut-daily-progress');
-    if(prog) grid.appendChild(prog);
+    const rc=document.getElementById('nut-right-col');
+    if(prog&&rc&&!rc.contains(prog)) rc.appendChild(prog);
   }catch(e){}
 }
 
-// legacy aliases
-function nutSaveLayout(){ nutSaveWidgetLayout(); }
-function nutRestoreLayout(){ nutRestoreWidgetLayout(); }
-
-let _nutDragSrc=null;
-
 function nutInitVcardDrag(){
-  nutRestoreWidgetLayout();
+  // Restore saved layout first
+  nutRestoreLayout();
 
-  // Restore card labels
+  // Restore saved card labels
   try{
     const labels=JSON.parse(localStorage.getItem('nutCardLabels')||'{}');
     Object.entries(labels).forEach(([key,val])=>{
@@ -8651,7 +8530,7 @@ function nutInitVcardDrag(){
     });
   }catch(e){}
 
-  // Make labels editable
+  // Make labels editable + persist on blur
   document.querySelectorAll('.nut-vcard-label').forEach(el=>{
     el.setAttribute('contenteditable','true');
     el.setAttribute('spellcheck','false');
@@ -8666,71 +8545,85 @@ function nutInitVcardDrag(){
     });
   });
 
-  // Widget drag-and-drop on the grid
-  const grid=document.getElementById('nut-widget-grid');
-  if(!grid) return;
+  // Attach drag listeners to ALL 3 columns
+  NUT_COLS.forEach(cid=>{
+    const col=document.getElementById(cid);
+    if(!col) return;
 
-  grid.addEventListener('dragstart',e=>{
-    const card=e.target.closest('.nut-widget');
-    if(!card) return;
-    if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON'||
-       e.target.tagName==='TEXTAREA'||e.target.contentEditable==='true'){
-      e.preventDefault(); return;
-    }
-    _nutDragSrc=card;
-    e.dataTransfer.effectAllowed='move';
-    e.dataTransfer.setData('text/plain',card.id);
-    setTimeout(()=>card.classList.add('nvc-dragging'),0);
-  });
-
-  grid.addEventListener('dragend',()=>{
-    document.querySelectorAll('.nut-widget.nvc-dragging').forEach(c=>c.classList.remove('nvc-dragging'));
-    document.querySelectorAll('.nut-widget.nvc-drop-before,.nut-widget.nvc-drop-after').forEach(c=>{
-      c.classList.remove('nvc-drop-before','nvc-drop-after');
+    col.addEventListener('dragstart',e=>{
+      const card=e.target.closest('.nut-vcard');
+      if(!card) return;
+      if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON'||
+         e.target.tagName==='TEXTAREA'||e.target.contentEditable==='true'){
+        e.preventDefault(); return;
+      }
+      _nutDragSrc=card;
+      e.dataTransfer.effectAllowed='move';
+      e.dataTransfer.setData('text/plain', card.id);
+      setTimeout(()=>card.classList.add('nvc-dragging'),0);
     });
-    _nutDragSrc=null;
-    nutSaveWidgetLayout();
-  });
 
-  grid.addEventListener('dragover',e=>{
-    e.preventDefault();
-    document.querySelectorAll('.nut-widget.nvc-drop-before,.nut-widget.nvc-drop-after').forEach(c=>{
-      c.classList.remove('nvc-drop-before','nvc-drop-after');
+    col.addEventListener('dragend',()=>{
+      document.querySelectorAll('.nut-vcard.nvc-dragging').forEach(c=>c.classList.remove('nvc-dragging'));
+      document.querySelectorAll('.nut-vcard.nvc-over').forEach(c=>c.classList.remove('nvc-over'));
+      document.querySelectorAll('.nut-col-drop').forEach(c=>c.classList.remove('nut-col-drop'));
+      _nutDragSrc=null;
+      nutSaveLayout();
     });
-    const target=e.target.closest('.nut-widget');
-    if(target&&target!==_nutDragSrc&&target.id!=='nut-daily-progress'){
-      const rect=target.getBoundingClientRect();
-      const mid=rect.left+rect.width/2;
-      target.classList.add(e.clientX<mid?'nvc-drop-before':'nvc-drop-after');
-    }
-  });
 
-  grid.addEventListener('drop',e=>{
-    e.preventDefault();
-    document.querySelectorAll('.nut-widget.nvc-drop-before,.nut-widget.nvc-drop-after').forEach(c=>{
-      c.classList.remove('nvc-drop-before','nvc-drop-after');
+    col.addEventListener('dragover',e=>{
+      e.preventDefault();
+      const card=e.target.closest('.nut-vcard');
+      document.querySelectorAll('.nut-vcard.nvc-dragging-over').forEach(c=>c.classList.remove('nvc-dragging-over'));
+      document.querySelectorAll('.nut-col-drop').forEach(c=>c.classList.remove('nut-col-drop'));
+      if(card&&card!==_nutDragSrc){
+        card.classList.add('nvc-over');
+      } else if(!card){
+        col.classList.add('nut-col-drop');
+      }
     });
-    if(!_nutDragSrc) return;
-    const target=e.target.closest('.nut-widget');
-    if(!target||target===_nutDragSrc||target.id==='nut-daily-progress') return;
-    const rect=target.getBoundingClientRect();
-    const mid=rect.left+rect.width/2;
-    if(e.clientX<mid) grid.insertBefore(_nutDragSrc,target);
-    else grid.insertBefore(_nutDragSrc,target.nextSibling);
-    // Keep progress last
-    const prog=document.getElementById('nut-daily-progress');
-    if(prog) grid.appendChild(prog);
-    nutSaveWidgetLayout();
+
+    col.addEventListener('dragleave',e=>{
+      if(!col.contains(e.relatedTarget)){
+        col.classList.remove('nut-col-drop');
+      }
+    });
+
+    col.addEventListener('drop',e=>{
+      e.preventDefault();
+      col.classList.remove('nut-col-drop');
+      document.querySelectorAll('.nut-vcard.nvc-over').forEach(c=>c.classList.remove('nvc-over'));
+      if(!_nutDragSrc) return;
+      // Remove from pair wrapper if needed
+      const pair=_nutDragSrc.closest('#nvc-pair-sp');
+      if(pair) {
+        // Move the card out of the pair into col, then clean up empty pair
+        col.appendChild(_nutDragSrc);
+        if(!pair.querySelector('.nut-vcard')) pair.remove();
+      }
+      const card=e.target.closest('.nut-vcard');
+      if(card&&card!==_nutDragSrc){
+        // Insert before or after based on Y position
+        const rect=card.getBoundingClientRect();
+        const midY=rect.top+rect.height/2;
+        if(e.clientY<midY) col.insertBefore(_nutDragSrc,card);
+        else col.insertBefore(_nutDragSrc,card.nextSibling);
+      } else if(!card){
+        // Drop onto empty col space — append before progress
+        const prog=document.getElementById('nut-daily-progress');
+        if(prog&&col.contains(prog)) col.insertBefore(_nutDragSrc,prog);
+        else col.appendChild(_nutDragSrc);
+      }
+      nutSaveLayout();
+    });
   });
 }
 
 function nutRenderWelcomeDate(){
   const el=document.getElementById('nut-welcome-date');
-  const picker=document.getElementById('nut-date-picker');
+  if(!el) return;
   const activeDate=getActiveDate();
   const todayStr=nutTodayKey();
-  if(picker){ picker.max=todayStr; picker.value=activeDate; }
-  if(!el) return;
   const dias=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
   const meses=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   const parts=activeDate.split('-').map(Number);
@@ -9531,7 +9424,7 @@ function nutPersist(){
   try{ localStorage.setItem('nutr3',JSON.stringify(nutState)); }catch(e){}
   // Debounce sync to Supabase (saveState already handles timestamp)
   clearTimeout(nutPersist._t);
-  nutPersist._t=setTimeout(()=>{ if(typeof saveState==='function') saveState(); }, 300);
+  nutPersist._t=setTimeout(()=>{ if(typeof saveState==='function') saveState(); }, 1500);
 }
 function nutTodayKey(){
   const d=new Date();
@@ -9540,9 +9433,7 @@ function nutTodayKey(){
 
 function getActiveDate(){
   const el=document.getElementById('nut-active-date');
-  if(el&&el.value) return el.value;
-  if(_nutActiveDate) return _nutActiveDate;
-  return nutTodayKey();
+  return (el&&el.value)?el.value:nutTodayKey();
 }
 // Get or create the day record for the currently viewed date
 function nutGetActiveDay(){
@@ -9557,22 +9448,19 @@ function nutGetActiveDay(){
   return day;
 }
 
-let _nutActiveDate = '';
 function nutNavDay(dir){
   const el=document.getElementById('nut-active-date');
-  const current=(el?.value||_nutActiveDate)||nutTodayKey();
+  if(!el) return;
+  const current=el.value||nutTodayKey();
   if(dir>0 && current>=nutTodayKey()) return; // no future
   const parts=current.split('-').map(Number);
   const cur=new Date(parts[0],parts[1]-1,parts[2]);
   cur.setDate(cur.getDate()+dir);
-  const newDate=cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
-  _nutActiveDate=newDate;
-  if(el) el.value=newDate;
+  el.value=cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
   nutLoadDay();
-  nutRenderWelcomeDate();
   // Dim › button when on today
   const nextBtn=document.getElementById('nut-nav-next');
-  if(nextBtn) nextBtn.style.opacity=(newDate>=nutTodayKey()?'.3':'1');
+  if(nextBtn) nextBtn.style.opacity=(el.value>=nutTodayKey()?'.3':'1');
 }
 
 function nutLoadDay(){
