@@ -1575,9 +1575,23 @@ button, input, select, textarea { font-size: var(--fs) !important; }
             <div>
               <div style="font-size:22px;font-weight:400;color:var(--g800);letter-spacing:-.01em;line-height:1.2;font-family:'DM Serif Display',serif;">hey you! 👋</div>
               <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
-                <button onclick="nutNavDay(-1)" style="font-size:14px;line-height:1;background:none;border:none;cursor:pointer;color:var(--g400);padding:0 3px;transition:color .1s;" onmouseenter="this.style.color='var(--g800)'" onmouseleave="this.style.color='var(--g400)'">‹</button>
-                <div style="font-size:13px;color:var(--g400);" id="nut-welcome-date"></div>
-                <button onclick="nutNavDay(1)" id="nut-nav-next" style="font-size:14px;line-height:1;background:none;border:none;cursor:pointer;color:var(--g400);padding:0 3px;transition:color .1s;" onmouseenter="this.style.color='var(--g800)'" onmouseleave="this.style.color='var(--g400)'">›</button>
+                <div style="position:relative;display:inline-flex;align-items:center;">
+                  <button onclick="document.getElementById('nut-date-picker').showPicker?document.getElementById('nut-date-picker').showPicker():document.getElementById('nut-date-picker').click()" style="display:flex;align-items:center;gap:5px;background:none;border:none;cursor:pointer;padding:0;color:var(--g400);transition:color .1s;" onmouseenter="this.style.color='var(--g800)'" onmouseleave="this.style.color='var(--g400)'">
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="16" height="14" rx="2"/><path d="M6 2v4M14 2v4M2 9h16"/></svg>
+                    <span id="nut-welcome-date" style="font-size:13px;color:var(--g400);"></span>
+                  </button>
+                  <input type="date" id="nut-date-picker" max=""
+                    style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;"
+                    onchange="
+                      _nutActiveDate=this.value;
+                      const inputEl=document.getElementById('nut-active-date');
+                      if(inputEl) inputEl.value=this.value;
+                      nutLoadDay();
+                      nutRenderWelcomeDate();
+                      const nb=document.getElementById('nut-nav-next');
+                      if(nb) nb.style.opacity=(this.value>=nutTodayKey()?'.3':'1');
+                    "/>
+                </div>
               </div>
             </div>
           </div>
@@ -8621,9 +8635,11 @@ function nutInitVcardDrag(){
 
 function nutRenderWelcomeDate(){
   const el=document.getElementById('nut-welcome-date');
-  if(!el) return;
+  const picker=document.getElementById('nut-date-picker');
   const activeDate=getActiveDate();
   const todayStr=nutTodayKey();
+  if(picker){ picker.max=todayStr; picker.value=activeDate; }
+  if(!el) return;
   const dias=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
   const meses=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   const parts=activeDate.split('-').map(Number);
