@@ -7605,17 +7605,36 @@ function applySnapshot(snap){
   if(snap.nutState){
     const sn=snap.nutState;
     const merged={};
-    nutState.days.forEach(d=>merged[d.date]=d);
-    (sn.days||[]).forEach(d=>merged[d.date]=d);
+    // Primeiro aplica Supabase
+    (sn.days||[]).forEach(d=>{ merged[d.date]=d; });
+    // Depois sobrescreve com local SE o local tiver _foods ou vit mais recentes para hoje
+    const _today=nutTodayKey();
+    nutState.days.forEach(d=>{
+      if(d.date===_today){
+        // Para hoje: manter o local se tiver mais dados que o remoto
+        const remote=merged[_today];
+        const localHasMore = (
+          (d._foods&&d._foods.length>(remote?._foods?.length||0)) ||
+          (d.water>(remote?.water||0)) ||
+          ((d.poly||d.nourkrin||d.vitaD||d.ferro||d.creatina||d.minoxidil||d.magnesio) &&
+           !(remote?.poly||remote?.nourkrin||remote?.vitaD||remote?.ferro||remote?.creatina||remote?.minoxidil||remote?.magnesio))
+        );
+        if(localHasMore) merged[_today]=d;
+      } else {
+        if(!merged[d.date]) merged[d.date]=d;
+      }
+    });
     Object.assign(nutState, sn);
     nutState.days=Object.values(merged).sort((a,b)=>a.date.localeCompare(b.date));
 
-    // Always re-derive live state (foods/vit/water) from today's day record
-    // to avoid stale data from a previous session bleeding into today
-    const _today=nutTodayKey();
+    // Re-derive live state from today's day record
     const _todayRec=nutState.days.find(d=>d.date===_today);
     if(_todayRec){
-      nutState.foods=_todayRec._foods||[];
+      // Merge: prefer live nutState.vit/waterChecks/foods if they have more data than the record
+      const liveHasMoreVit=Object.keys(nutState.vit||{}).length>0;
+      const liveHasMoreWater=(nutState.waterChecks||0)>0;
+      const liveHasMoreFoods=(nutState.foods||[]).length>0;
+
       nutState.vit={};
       if(_todayRec.poly)      nutState.vit['0-0']=true;
       if(_todayRec.nourkrin)  nutState.vit['0-1']=true;
@@ -7626,8 +7645,8 @@ function applySnapshot(snap){
       if(_todayRec.minoxidil) nutState.vit['2-1']=true;
       if(_todayRec.magnesio)  nutState.vit['2-2']=true;
       nutState.waterChecks=_todayRec.water?Math.min(4,Math.round(_todayRec.water/500)):0;
+      nutState.foods=_todayRec._foods||[];
     } else {
-      // No record for today — start fresh
       nutState.foods=[];
       nutState.vit={};
       nutState.waterChecks=0;
@@ -7635,7 +7654,6 @@ function applySnapshot(snap){
     nutState.lastDate=_today;
 
     nutPersist();
-    // Re-inject custom foods into FOODS array
     if(typeof loadCustomFoods==='function') loadCustomFoods();
   }
   if(snap.nutUI){
@@ -9440,7 +9458,7 @@ function nutPersist(){
   try{ localStorage.setItem('nutr3',JSON.stringify(nutState)); }catch(e){}
   // Debounce sync to Supabase (saveState already handles timestamp)
   clearTimeout(nutPersist._t);
-  nutPersist._t=setTimeout(()=>{ if(typeof saveState==='function') saveState(); }, 1500);
+  nutPersist._t=setTimeout(()=>{ if(typeof saveState==='function') saveState(); }, 300);
 }
 function nutTodayKey(){
   const d=new Date();
