@@ -3,21 +3,24 @@
 <head>
   <title>fresh ❤</title>
 <meta charset="UTF-8">
-<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display:ital@0;1&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --ff:'Schibsted Grotesk',sans-serif;
+  --ff-display:'Playfair Display',serif;
   --fs:13px;--lh:1.55;
   --accent:#7C6FCD;--accent-l:#F0EEF9;
   --red:#D05050;
   /* Warm neutral palette */
   --g50:#F8F7F5;--g100:#EEECE8;--g150:#E2DED8;--g200:#CECAC4;
   --g300:#ADA9A2;--g400:#8C8880;--g500:#6B6760;--g700:#3D3A35;--g800:#1C1A18;
-  --white:#FDFCFB;--radius:11px;
-  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.06);
-  --card-outer-bg:#EDEAE4;
+  --white:#FDFCFB;--radius:14px;
+  --shadow:0 2px 16px rgba(0,0,0,.07),0 1px 3px rgba(0,0,0,.05);
+  --card-outer-bg:#E8E4DC;
   /* Sidebar accent */
   --sb-accent:#7C6FCD;--sb-accent-l:#F0EEF9;
+  /* Sidebar always expanded */
+  --sb-w:220px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{
@@ -33,7 +36,7 @@ body{
 /* Card principal que envolve todo o app */
 .app-card{
   width:100%;height:100%;
-  background:var(--white);
+  background:var(--g50);
   border-radius:20px;
   overflow:hidden;
   display:flex;
@@ -46,7 +49,7 @@ body{
 /* ── SIDEBAR ── */
 /* ── SIDEBAR — pill icon design ── */
 .sidebar{
-  width:68px;flex-shrink:0;
+  width:220px;flex-shrink:0;
   background:var(--white);
   border-right:1px solid var(--g100);
   display:flex;flex-direction:column;
@@ -58,11 +61,11 @@ body{
   box-shadow:1px 0 0 var(--g100);
 }
 .sidebar.sb-expanded{
-  width:210px;
+  width:220px;
 }
 /* pill container that holds all nav icons */
 .sb-pill{
-  flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+  flex:1;display:flex;flex-direction:column;align-items:stretch;gap:2px;
   padding:0 10px;overflow-y:auto;overflow-x:hidden;
 }
 .sidebar.sb-expanded .sb-pill{ align-items:stretch; }
@@ -81,7 +84,7 @@ body{
 }
 .sb-logo-txt{
   font-size:15px;font-weight:700;color:var(--g800);letter-spacing:-.01em;
-  white-space:nowrap;overflow:hidden;opacity:0;width:0;
+  white-space:nowrap;overflow:hidden;opacity:1;width:auto;min-width:90px;
   transition:opacity .18s,width .22s;
   border:none;outline:none;background:none;font-family:inherit;cursor:text;
 }
@@ -90,7 +93,7 @@ body{
 /* hello text */
 .sb-hello-wrap{
   padding:0 10px 10px;overflow:hidden;
-  display:none;
+  display:block;
 }
 .sidebar.sb-expanded .sb-hello-wrap{ display:block; }
 .sb-hello{
@@ -103,12 +106,12 @@ body{
 /* nav items */
 .sb-nav-item{
   display:flex;align-items:center;gap:10px;
-  padding:0;width:44px;height:44px;
-  border-radius:14px;
+  padding:0 10px;width:100%;height:40px;
+  border-radius:10px;
   border:none;background:none;cursor:pointer;
   color:var(--g400);font-family:inherit;
   transition:all .15s cubic-bezier(.4,0,.2,1);
-  position:relative;flex-shrink:0;justify-content:center;
+  position:relative;flex-shrink:0;justify-content:flex-start;
   text-align:left;overflow:hidden;
 }
 .sidebar.sb-expanded .sb-nav-item{
@@ -126,7 +129,7 @@ body{
 }
 .sb-nav-label{
   font-size:13px;font-weight:500;white-space:nowrap;
-  opacity:0;width:0;overflow:hidden;
+  opacity:1;width:auto;overflow:hidden;
   transition:opacity .15s,width .22s;
 }
 .sidebar.sb-expanded .sb-nav-label{ opacity:1;width:auto; }
@@ -145,10 +148,10 @@ body{
 /* category dot items */
 .sb-cat-item{
   display:flex;align-items:center;gap:10px;
-  padding:0;width:44px;height:36px;
-  border-radius:12px;border:none;background:none;cursor:pointer;
+  padding:0 10px;width:100%;height:32px;
+  border-radius:8px;border:none;background:none;cursor:pointer;
   color:var(--g400);font-family:inherit;
-  transition:all .15s;position:relative;flex-shrink:0;justify-content:center;
+  transition:all .15s;position:relative;flex-shrink:0;justify-content:flex-start;
   overflow:hidden;
 }
 .sidebar.sb-expanded .sb-cat-item{
@@ -159,7 +162,7 @@ body{
 .sb-cat-dot{ width:8px;height:8px;border-radius:50%;flex-shrink:0; }
 .sb-cat-label{
   font-size:12px;font-weight:500;white-space:nowrap;
-  opacity:0;width:0;overflow:hidden;transition:opacity .15s,width .22s;
+  opacity:1;width:auto;overflow:hidden;transition:opacity .15s,width .22s;
 }
 .sidebar.sb-expanded .sb-cat-label{ opacity:1;width:auto; }
 
@@ -173,28 +176,22 @@ body{
 }
 .sidebar.sb-expanded .sb-bottom{ align-items:stretch; }
 .sb-util-btn{
-  width:44px;height:36px;border-radius:10px;border:none;background:none;
-  cursor:pointer;color:var(--g400);display:flex;align-items:center;justify-content:center;
-  font-size:16px;transition:all .15s;gap:8px;flex-shrink:0;overflow:hidden;
+  width:100%;height:36px;border-radius:10px;border:none;background:none;
+  cursor:pointer;color:var(--g400);display:flex;align-items:center;justify-content:flex-start;
+  font-size:16px;transition:all .15s;gap:8px;flex-shrink:0;overflow:hidden;padding:0 10px;
 }
 .sidebar.sb-expanded .sb-util-btn{ width:100%;justify-content:flex-start;padding:0 10px; }
 .sb-util-btn:hover{ background:var(--g50);color:var(--g700); }
 .sb-util-label{
   font-size:12px;font-weight:500;white-space:nowrap;
-  opacity:0;width:0;overflow:hidden;transition:opacity .15s,width .22s;
+  opacity:1;width:auto;overflow:hidden;transition:opacity .15s,width .22s;
 }
 .sidebar.sb-expanded .sb-util-label{ opacity:1;width:auto; }
 
 /* expand toggle tab */
 #sb-toggle-btn{
-  position:absolute;right:-12px;top:50%;transform:translateY(-50%);
-  width:14px;height:36px;border-radius:0 8px 8px 0;
-  background:var(--white);border:1px solid var(--g100);border-left:none;
-  cursor:pointer;color:var(--g300);font-size:10px;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:3px 0 8px rgba(0,0,0,.06);z-index:20;transition:all .15s;padding:0;
+  display:none;
 }
-#sb-toggle-btn:hover{ color:var(--g600,var(--g500));background:var(--g50); }
 
 /* legacy compat */
 .sb-item{ display:none; }
@@ -1279,7 +1276,7 @@ button, input, select, textarea { font-size: var(--fs) !important; }
 /* ── NUTRIÇÃO VIEW ── */
 #view-nutricao { position:relative; }
 
-.nut-card { background:var(--white); border:1px solid var(--g100); border-radius:14px; padding:.75rem .9rem; transition:box-shadow .18s; }
+.nut-card { background:var(--white); border:1px solid var(--g100); border-radius:var(--radius); padding:.85rem 1rem; transition:box-shadow .18s; box-shadow:var(--shadow); }
 .nut-card-title { font-size:10px; font-weight:700; color:var(--g400); margin-bottom:.5rem; letter-spacing:.06em; text-transform:uppercase; }
 .nvc-widget-bar .nut-card-title { font-size:13px; font-weight:600; color:var(--g700); text-transform:none; letter-spacing:normal; margin-bottom:0; }
 
@@ -1362,13 +1359,27 @@ button, input, select, textarea { font-size: var(--fs) !important; }
 /* Priority star in task detail */
 #td-star-btn { transition:all .2s; }
 #td-star-btn:hover { transform:scale(1.2); }
+
+/* Playfair Display on headings */
+.task-panel-cat-title,
+.nut-vcard-label[data-key="nexus"],
+.nut-vcard-label[data-key="hoje"],
+.nut-vcard-label[data-key="treino"],
+.nut-vcard-label[data-key="ker"],
+.nut-vcard-label[data-key="water"],
+.nut-vcard-label[data-key="vit"],
+.tp-cat-group-name,
+.sb-logo-txt {
+  font-family:var(--ff-display) !important;
+  letter-spacing:-.01em !important;
+}
 </style>
 </head>
 <body>
 <div class="app-card">
 
 <!-- SIDEBAR -->
-<div class="sidebar" id="sidebar">
+<div class="sidebar sb-expanded" id="sidebar">
 
   <!-- BRAND -->
   <div class="sb-logo-wrap">
@@ -4283,7 +4294,7 @@ function saveSbLogo(val){
   try{localStorage.setItem(LS+'sbLogo',val);}catch(e){}
 }
 let sidebarVisible=true;
-let sidebarExpanded=false;
+let sidebarExpanded=true;
 function toggleSidebar(){
   sidebarExpanded=!sidebarExpanded;
   const sb=document.getElementById('sidebar');
@@ -7593,7 +7604,7 @@ function buildSnapshot(){
 
   // Gather nut UI state from localStorage (transient UI prefs)
   const nutUI = {
-    layout:      safeLS('nutLayout'),
+    widgetLayout: safeLS('nutWidgetLayout'),
     cardLabels:  safeLS('nutCardLabels'),
     cardNotes:   safeLS('nutCardNotes'),
     inspiration: localStorage.getItem('nutInspirationText')||null,
@@ -7713,7 +7724,9 @@ function applySnapshot(snap){
   }
   if(snap.nutUI){
     const u=snap.nutUI;
-    if(u.layout)      localStorage.setItem('nutLayout',      JSON.stringify(u.layout));
+    // nutLayout é formato antigo (3 colunas) — ignorar para não quebrar o novo grid
+    // if(u.layout) localStorage.setItem('nutLayout', JSON.stringify(u.layout));
+    if(u.widgetLayout) localStorage.setItem('nutWidgetLayout', JSON.stringify(u.widgetLayout));
     if(u.cardLabels)  localStorage.setItem('nutCardLabels',  JSON.stringify(u.cardLabels));
     if(u.cardNotes)   localStorage.setItem('nutCardNotes',   JSON.stringify(u.cardNotes));
     if(u.inspiration) localStorage.setItem('nutInspirationText', u.inspiration);
@@ -8589,6 +8602,8 @@ function nutSaveWidgetLayout(){
 
 function nutRestoreWidgetLayout(){
   try{
+    // Limpar layout antigo (3 colunas) para não interferir
+    localStorage.removeItem('nutLayout');
     const saved=localStorage.getItem('nutWidgetLayout');
     if(!saved) return;
     const layout=JSON.parse(saved);
