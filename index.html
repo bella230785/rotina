@@ -9433,7 +9433,9 @@ function nutTodayKey(){
 
 function getActiveDate(){
   const el=document.getElementById('nut-active-date');
-  return (el&&el.value)?el.value:nutTodayKey();
+  if(el&&el.value) return el.value;
+  if(_nutActiveDate) return _nutActiveDate;
+  return nutTodayKey();
 }
 // Get or create the day record for the currently viewed date
 function nutGetActiveDay(){
@@ -9448,20 +9450,22 @@ function nutGetActiveDay(){
   return day;
 }
 
+let _nutActiveDate = '';
 function nutNavDay(dir){
   const el=document.getElementById('nut-active-date');
-  if(!el) return;
-  const current=el.value||nutTodayKey();
+  const current=(el?.value||_nutActiveDate)||nutTodayKey();
   if(dir>0 && current>=nutTodayKey()) return; // no future
   const parts=current.split('-').map(Number);
   const cur=new Date(parts[0],parts[1]-1,parts[2]);
   cur.setDate(cur.getDate()+dir);
-  el.value=cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
+  const newDate=cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
+  _nutActiveDate=newDate;
+  if(el) el.value=newDate;
   nutLoadDay();
   nutRenderWelcomeDate();
   // Dim › button when on today
   const nextBtn=document.getElementById('nut-nav-next');
-  if(nextBtn) nextBtn.style.opacity=(el.value>=nutTodayKey()?'.3':'1');
+  if(nextBtn) nextBtn.style.opacity=(newDate>=nutTodayKey()?'.3':'1');
 }
 
 function nutLoadDay(){
